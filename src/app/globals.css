@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0e141b;
+  color: #edf1f4;
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: #3ed9a3;
+  color: #0e141b;
+}
+
+/* Respect reduced-motion preferences across the whole app. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Visible keyboard focus ring, styled to match the signal accent. */
+:focus-visible {
+  outline: 2px solid #3ed9a3;
+  outline-offset: 2px;
+}
+
+.leaflet-container {
+  background: #161e27 !important;
+  border-radius: 0.75rem;
+}
+
+@layer components {
+  .cp-input {
+    @apply w-full bg-ink-panel border border-ink-line rounded-lg px-3.5 py-2.5 text-ivory placeholder:text-slate-soft/60 focus:border-signal outline-none transition-colors;
+  }
+
+  /* Glassmorphism surface for the command-center redesign: a translucent
+     panel over the ink background rather than a flat solid card. */
+  .glass-card {
+    @apply relative rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl;
+    background-image: linear-gradient(135deg, rgba(62, 217, 163, 0.06), rgba(79, 195, 247, 0.03) 60%, transparent);
+  }
+
+  .glass-card-hover {
+    @apply transition-all duration-300 hover:border-white/20 hover:bg-white/[0.05] hover:-translate-y-0.5;
+  }
+
+  .skeleton {
+    @apply rounded-lg bg-ink-raised bg-[length:800px_100%] bg-no-repeat animate-shimmer;
+    background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  }
+}
