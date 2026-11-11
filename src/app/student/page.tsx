@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import GrievanceForm from "@/components/GrievanceForm";
@@ -10,6 +10,10 @@ import { SkeletonFeed } from "@/components/Skeletons";
 import { GrievanceDTO } from "@/types";
 import { getSocket } from "@/lib/socketClient";
 import { useToastQueue } from "@/lib/useToastQueue";
+import GrievanceDetailPanel from "@/components/GrievanceDetailPanel";
+import CampusHub from "@/components/CampusHub";
+import { api } from "@/lib/client";
+import { readFeedWindow } from "@/lib/feedWindow";
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -17,57 +21,51 @@ export default function StudentDashboard() {
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [grievances, setGrievances] = useState<GrievanceDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGrievance, setSelectedGrievance] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [cursor, setCursor] = useState<string | null>(null), [activeTotal, setActiveTotal] = useState(0);
+  const pages = useRef(1), feedVersion = useRef(0);
+  const invalidateFeed = useCallback(() => { ++feedVersion.current; }, []);
   const { toasts, push, dismiss } = useToastQueue();
 
-  const loadGrievances = useCallback(async (authToken: string) => {
-    const res = await fetch("/api/grievances", { headers: { Authorization: `Bearer ${authToken}` } });
-    const data = await res.json();
-    if (res.ok) setGrievances(data.grievances);
-    setLoading(false);
+  const loadGrievances = useCallback(async (_authToken: string) => {
+    const version = ++feedVersion.current;
+    try {
+      const data = await readFeedWindow(api, "/api/grievances", "grievances", pages.current);
+      if (version !== feedVersion.current) return;
+      setGrievances(data.grievances); setCursor(data.nextCursor); setActiveTotal(data.summary.active); setLoadError("");
+    } catch(e: any) { if (version === feedVersion.current) setLoadError(e.message); }
+    finally { if (version === feedVersion.current) setLoading(false); }
   }, []);
 
   useEffect(() => {
-    const t = localStorage.getItem("cp_token");
-    const u = localStorage.getItem("cp_user");
-    if (!t || !u) {
-      router.push("/");
-      return;
-    }
-    const parsedUser = JSON.parse(u);
-    if (parsedUser.role !== "student") {
-      router.push("/admin");
-      return;
-    }
-    setToken(t);
-    setUser(parsedUser);
-    loadGrievances(t);
+    let cancelled = false; let cleanup = () => {};
+    (async () => {
+      try {
+        const { user: currentUser } = await api("/api/auth/me");
+        if (cancelled) return;
+        if (currentUser.role !== "student") { router.replace("/admin"); return; }
+        const t = "cookie-session"; setToken(t); setUser(currentUser); loadGrievances(t);
+        const socket = getSocket();
+        const reconnect = () => loadGrievances(t);
+        const changed = ({ grievanceId, status }) => {
+          setGrievances(prev => prev.map(g => g._id === grievanceId ? { ...g, status } : g));
+          loadGrievances(t); push('Your grievance is now "' + status + '"', status === "Resolved" ? "success" : "info");
+        };
+        socket.on("connect", reconnect); socket.on("grievance:statusChanged", changed);
+        cleanup = () => { socket.off("connect", reconnect); socket.off("grievance:statusChanged", changed); };
+      } catch(e: any) { if (!cancelled) setLoadError(e.message); }
+    })();
+    return () => { cancelled = true; invalidateFeed(); cleanup(); };
+  }, [router, loadGrievances, push, invalidateFeed]);
 
-    const socket = getSocket();
-    // Server verifies this token itself and decides room membership from
-    // it — the client never gets to declare its own role. Re-join on
-    // every (re)connect so a dropped connection doesn't silently stop
-    // delivering status updates.
-    socket.on("connect", () => socket.emit("join", { token: t }));
-    if (socket.connected) socket.emit("join", { token: t });
-    socket.on("grievance:statusChanged", ({ grievanceId, status }) => {
-      setGrievances((prev) => prev.map((g) => (g._id === grievanceId ? { ...g, status } : g)));
-      push(`Your grievance is now "${status}"`, status === "Resolved" ? "success" : "info");
-    });
+  if (!user) return <main className="p-8 text-slate-soft">{loadError || "Loading your workspace…"}</main>;
 
-    return () => {
-      socket.off("connect");
-      socket.off("grievance:statusChanged");
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, loadGrievances]);
-
-  if (!user) return null;
-
-  const activeCount = grievances.filter((g) => g.status !== "Resolved").length;
+  const activeCount = activeTotal;
 
   return (
     <div className="min-h-screen">
-      <Navbar userName={user.name} role="student" />
+      <Navbar userName={user.name} role="student" onOpenGrievance={setSelectedGrievance}/>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
         {/* Hero */}
         <div className="glass-card p-8 text-center sm:text-left animate-rise">
@@ -88,9 +86,10 @@ export default function StudentDashboard() {
           </a>
         </div>
 
-        <GrievanceForm token={token!} onSubmitted={() => loadGrievances(token!)} />
+        <GrievanceForm token={token!} onSubmitted={() => loadGrievances(token!)} onOpenGrievance={setSelectedGrievance} />
 
         <div>
+          {loadError && <p role="alert" className="text-critical text-sm mb-3">{loadError}<button className="underline ml-2" onClick={() => { setLoadError(""); loadGrievances(token!); }}>Retry</button></p>}
           <h2 className="font-display text-lg font-semibold mb-3">Your grievances</h2>
           {loading ? (
             <SkeletonFeed />
@@ -99,12 +98,15 @@ export default function StudentDashboard() {
           ) : (
             <div className="space-y-3">
               {grievances.map((g, i) => (
-                <GrievanceCard key={g._id} grievance={g} index={i} />
+                <div key={g._id}><GrievanceCard grievance={g} index={i}/><button className="cp-secondary mt-2" onClick={() => setSelectedGrievance(g._id)}>Evidence, feedback & details</button></div>
               ))}
             </div>
           )}
         </div>
+        {cursor && <button className="cp-secondary" onClick={async () => { try { pages.current++; await loadGrievances(token!); } catch(e: any) { setLoadError(e.message); } }}>Load older grievances</button>}
+        <CampusHub admin={false} onOpenGrievance={setSelectedGrievance}/>
       </main>
+      {selectedGrievance && <GrievanceDetailPanel id={selectedGrievance} admin={false} onClose={() => setSelectedGrievance(null)} onChanged={() => loadGrievances(token!)}/>}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   );

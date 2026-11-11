@@ -10,6 +10,7 @@ export function sanitizeGrievanceForAdmin<T extends { isAnonymous?: boolean; stu
   if (plain.isAnonymous) {
     delete plain.student;
   }
+  if (plain.history) plain.history = plain.history.map(({ actor, ...entry }: any) => entry);
   return plain;
 }
 

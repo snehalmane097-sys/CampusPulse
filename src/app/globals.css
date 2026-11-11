@@ -43,7 +43,19 @@ body {
   border-radius: 0.75rem;
 }
 
+.cp-campus-map .leaflet-control-attribution {
+  max-width: 65%;
+  white-space: normal;
+}
+.cp-map-pin { font-size: 28px; line-height: 36px; }
+
 @layer components {
+  .cp-primary {
+    @apply rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-signal-dim disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .cp-secondary {
+    @apply rounded-lg border border-white/15 px-3 py-2 text-sm text-ivory transition-colors hover:border-signal hover:text-signal disabled:opacity-50 disabled:cursor-not-allowed;
+  }
   .cp-input {
     @apply w-full bg-ink-panel border border-ink-line rounded-lg px-3.5 py-2.5 text-ivory placeholder:text-slate-soft/60 focus:border-signal outline-none transition-colors;
   }

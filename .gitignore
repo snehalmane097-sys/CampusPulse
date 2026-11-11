@@ -1,5 +1,46 @@
+# Dependencies and generated output
 node_modules/
 .next/
+.next-dev/
+.next-v2/
+next-env.d.ts
+# Local environment and credentials (keep the public template trackable)
 .env
 .env.*
 !.env.example
+.envrc
+.envrc.local
+.aws/
+*.pem
+*.key
+
+# Private runtime data and local database/backup artifacts
+.private-data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.wt
+WiredTiger*
+mongod.lock
+storage.bson
+/data/db/
+/mongodb-data/
+/backups/
+/dump/
+/uploads/
+
+# Test output, caches and logs
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.log

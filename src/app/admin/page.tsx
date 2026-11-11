@@ -16,12 +16,16 @@ import { IconLayers, IconActivity, IconRadar, IconChart, IconAlertTriangle, Icon
 import { GrievanceDTO, IncidentDTO, IncidentDetailDTO, AnalyticsDTO, GrievanceStatus } from "@/types";
 import { getSocket } from "@/lib/socketClient";
 import { useToastQueue } from "@/lib/useToastQueue";
+import GrievanceDetailPanel from "@/components/GrievanceDetailPanel";
+import CampusHub from "@/components/CampusHub";
+import { api } from "@/lib/client";
+import { readFeedWindow } from "@/lib/feedWindow";
 
 // Leaflet touches window at import time, so it must be a client-only,
 // SSR-disabled dynamic import inside the Next.js app router.
 const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
 
-type Tab = "overview" | "feed" | "incidents" | "map" | "analytics" | "warnings";
+type Tab = "overview" | "feed" | "incidents" | "map" | "analytics" | "warnings" | "community";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -34,6 +38,11 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [selectedIncident, setSelectedIncident] = useState<IncidentDetailDTO | null>(null);
   const [expandedReasons, setExpandedReasons] = useState<string | null>(null);
+  const [selectedGrievance, setSelectedGrievance] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [cursor, setCursor] = useState<string | null>(null);
+  const pages = useRef(1), feedVersion = useRef(0);
+  const invalidateFeed = useCallback(() => { ++feedVersion.current; }, []);
   const { toasts, push, dismiss } = useToastQueue();
 
   // Refetching every field on every socket event would work, but a burst of
@@ -43,17 +52,14 @@ export default function AdminDashboard() {
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenRef = useRef<string | null>(null);
 
-  const loadAll = useCallback(async (authToken: string) => {
-    const headers = { Authorization: `Bearer ${authToken}` };
-    const [gRes, iRes, aRes] = await Promise.all([
-      fetch("/api/grievances", { headers }),
-      fetch("/api/incidents", { headers }),
-      fetch("/api/analytics", { headers }),
-    ]);
-    if (gRes.ok) setGrievances((await gRes.json()).grievances);
-    if (iRes.ok) setIncidents((await iRes.json()).incidents);
-    if (aRes.ok) setAnalytics(await aRes.json());
-    setLoading(false);
+  const loadAll = useCallback(async (_authToken: string) => {
+    const version = ++feedVersion.current;
+    try {
+      const [feed, incidentData, analyticsData] = await Promise.all([readFeedWindow(api, "/api/grievances", "grievances", pages.current), api("/api/incidents"), api("/api/analytics")]);
+      if (version !== feedVersion.current) return;
+      setGrievances(feed.grievances); setCursor(feed.nextCursor); setIncidents(incidentData.incidents); setAnalytics(analyticsData); setLoadError("");
+    } catch(e: any) { if (version === feedVersion.current) setLoadError(e.message); }
+    finally { if (version === feedVersion.current) setLoading(false); }
   }, []);
 
   const scheduleRefresh = useCallback(() => {
@@ -64,57 +70,27 @@ export default function AdminDashboard() {
   }, [loadAll]);
 
   useEffect(() => {
-    const t = localStorage.getItem("cp_token");
-    const u = localStorage.getItem("cp_user");
-    if (!t || !u) {
-      router.push("/");
-      return;
-    }
-    const parsedUser = JSON.parse(u);
-    if (parsedUser.role !== "admin") {
-      router.push("/student");
-      return;
-    }
-    setToken(t);
-    tokenRef.current = t;
-    setUser(parsedUser);
-    loadAll(t);
-
-    const socket = getSocket();
-    // Server verifies this token and decides room membership itself — the
-    // client never gets to just claim "isAdmin". Re-join on every
-    // (re)connect so a dropped connection doesn't silently go stale.
-    socket.on("connect", () => socket.emit("join", { token: t }));
-    if (socket.connected) socket.emit("join", { token: t });
-
-    socket.on("grievance:new", ({ grievance }: { grievance: GrievanceDTO }) => {
-      setGrievances((prev) => [grievance, ...prev]);
-      push(`New ${grievance.category.toLowerCase()} report — ${grievance.location}`, "info");
-      scheduleRefresh();
-    });
-    socket.on(
-      "grievance:statusChanged",
-      ({ grievanceId, status }: { grievanceId: string; status: GrievanceStatus }) => {
-        setGrievances((prev) => prev.map((g) => (g._id === grievanceId ? { ...g, status } : g)));
-        scheduleRefresh();
-      }
-    );
-    socket.on("incident:updated", (payload: { status?: GrievanceStatus }) => {
-      if (payload?.status === "Resolved") push("An incident was fully resolved.", "success");
-      scheduleRefresh();
-    });
-
-    return () => {
-      socket.off("connect");
-      socket.off("grievance:new");
-      socket.off("grievance:statusChanged");
-      socket.off("incident:updated");
-      if (refreshTimer.current) clearTimeout(refreshTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, loadAll, scheduleRefresh]);
+    let cancelled = false; let cleanup = () => {};
+    (async () => {
+      try {
+        const { user: currentUser } = await api("/api/auth/me");
+        if (cancelled) return;
+        if (currentUser.role !== "admin") { router.replace("/student"); return; }
+        const t = "cookie-session"; setToken(t); tokenRef.current = t; setUser(currentUser); loadAll(t);
+        const socket = getSocket();
+        const reconnect = () => scheduleRefresh();
+        const newReport = ({ grievance }) => { setGrievances(prev => [grievance, ...prev.filter(g => g._id !== grievance._id)]); push('New ' + grievance.category.toLowerCase() + ' report - ' + grievance.location, "info"); scheduleRefresh(); };
+        const statusChanged = ({ grievanceId, status }) => { setGrievances(prev => prev.map(g => g._id === grievanceId ? { ...g, status } : g)); scheduleRefresh(); };
+        const incidentChanged = (payload) => { if (payload?.status === "Resolved") push("An incident was fully resolved.", "success"); scheduleRefresh(); };
+        socket.on("connect", reconnect); socket.on("grievance:new", newReport); socket.on("grievance:statusChanged", statusChanged); socket.on("incident:updated", incidentChanged);
+        cleanup = () => { socket.off("connect", reconnect); socket.off("grievance:new", newReport); socket.off("grievance:statusChanged", statusChanged); socket.off("incident:updated", incidentChanged); if (refreshTimer.current) clearTimeout(refreshTimer.current); };
+      } catch(e: any) { if (!cancelled) setLoadError(e.message); }
+    })();
+    return () => { cancelled = true; invalidateFeed(); cleanup(); };
+  }, [router, loadAll, scheduleRefresh, push, invalidateFeed]);
 
   async function updateStatus(id: string, status: GrievanceStatus) {
+    try {
     const res = await fetch(`/api/grievances/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -125,23 +101,24 @@ export default function AdminDashboard() {
       push(`Status updated to "${status}"`, "success");
       scheduleRefresh();
     } else {
-      push("Could not update status — please retry.", "warning");
+      const data = await res.json().catch(() => ({})); push(data.error || "Could not update status - please retry.", "warning");
     }
+    } catch { push("Could not reach the server. Please retry.", "warning"); }
   }
 
   async function openIncident(id: string) {
-    const res = await fetch(`/api/incidents/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setSelectedIncident((await res.json()).incident);
+    try { setSelectedIncident((await api(`/api/incidents/${id}`)).incident); } catch(e: any) { push(e.message, "warning"); }
   }
 
-  if (!user) return null;
+  if (!user) return <main className="p-8 text-slate-soft">{loadError || "Loading your workspace…"}</main>;
 
-  const criticalCount = grievances.filter((g) => g.priorityLabel === "Critical" && g.status !== "Resolved").length;
+  const criticalCount = analytics?.criticalActive ?? grievances.filter((g) => g.priorityLabel === "Critical" && g.status !== "Resolved").length;
 
   return (
     <div className="min-h-screen">
-      <Navbar userName={user.name} role="admin" />
+      <Navbar userName={user.name} role="admin" onOpenGrievance={setSelectedGrievance}/>
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {loadError && <p role="alert" className="text-critical">{loadError}<button className="underline ml-3" onClick={() => loadAll(token!)}>Retry</button></p>}
         {loading ? (
           <SkeletonKPIs />
         ) : (
@@ -157,6 +134,7 @@ export default function AdminDashboard() {
               ["map", "Campus Radar", IconRadar],
               ["analytics", "Analytics", IconChart],
               ["warnings", "Early Warnings", IconAlertTriangle],
+              ["community", "Campus 2.0", IconActivity],
             ] as const
           ).map(([key, label, Icon]) => (
             <button
@@ -193,7 +171,7 @@ export default function AdminDashboard() {
                 {analytics && <TrendChart data={analytics.trend} />}
               </div>
             </div>
-            {analytics && <CampusMap data={analytics} />}
+            {analytics && <CampusMap data={analytics} admin onOpenGrievance={setSelectedGrievance} onOpenIncident={openIncident} />}
           </div>
         )}
 
@@ -244,11 +222,12 @@ export default function AdminDashboard() {
                     )}
 
                     <div className="ml-auto flex gap-1.5 flex-wrap">
+                      <button className="cp-secondary" onClick={() => setSelectedGrievance(g._id)}>Evidence & resolution</button>
                       {(["Pending", "In Progress", "Resolved"] as const).map((s) => (
                         <button
                           key={s}
                           onClick={() => updateStatus(g._id, s)}
-                          disabled={g.status === s}
+                          disabled={g.status === s || g.status === "Resolved"}
                           className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${
                             g.status === s
                               ? "border-signal/30 text-signal/60 cursor-default"
@@ -287,15 +266,15 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {tab === "map" && analytics && <CampusMap data={analytics} />}
+        {tab === "map" && analytics && <CampusMap data={analytics} admin onOpenGrievance={setSelectedGrievance} onOpenIncident={openIncident} />}
 
         {tab === "analytics" && analytics && (
           <div className="grid md:grid-cols-2 gap-6">
             <Panel title="Grievances by category">
-              <CategoryChart data={analytics.categoryDistribution} />
+              <CategoryChart data={analytics.categoryDistribution} expectedTotal={analytics.total} />
             </Panel>
             <Panel title="Priority distribution">
-              <PriorityChart data={analytics.priorityDistribution} />
+              <PriorityChart data={analytics.priorityDistribution} expectedTotal={analytics.total} />
             </Panel>
             <Panel title="Reports by location">
               <LocationChart data={analytics.hotspots} />
@@ -307,7 +286,10 @@ export default function AdminDashboard() {
         )}
 
         {tab === "warnings" && <EarlyWarningPanel warnings={analytics?.earlyWarnings ?? []} />}
+        {tab === "community" && <CampusHub admin onOpenGrievance={setSelectedGrievance}/>}
+        {tab === "feed" && cursor && <button className="cp-secondary" onClick={async () => { try { pages.current++; await loadAll(token!); } catch(e: any) { setLoadError(e.message); } }}>Load older grievances</button>}
       </main>
+      {selectedGrievance && <GrievanceDetailPanel id={selectedGrievance} admin onClose={() => setSelectedGrievance(null)} onChanged={scheduleRefresh}/>}
 
       <IncidentDetailModal incident={selectedIncident} onClose={() => setSelectedIncident(null)} />
       <ToastStack toasts={toasts} onDismiss={dismiss} />
@@ -351,7 +333,7 @@ function KPIStrip({ analytics, criticalCount }: { analytics: AnalyticsDTO | null
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="glass-card p-5">
+    <div className="glass-card p-5 min-w-0">
       <h3 className="font-display font-semibold mb-2">{title}</h3>
       {children}
     </div>

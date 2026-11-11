@@ -1,0 +1,31 @@
+name: CampusPulse checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Start disposable MongoDB replica set
+        run: |
+          docker run -d --name campuspulse-mongo -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            if docker exec campuspulse-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})'; then break; fi
+            sleep 1
+          done
+          docker exec campuspulse-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for i in $(seq 1 30); do
+            if docker exec campuspulse-mongo mongosh --quiet --eval 'if(!db.hello().isWritablePrimary) quit(1)'; then break; fi
+            sleep 1
+          done
+      - run: npm run test:integration
+        env:
+          TEST_MONGODB_URI: mongodb://localhost:27017/campuspulse_test_ci?replicaSet=rs0
+      - run: npm run build

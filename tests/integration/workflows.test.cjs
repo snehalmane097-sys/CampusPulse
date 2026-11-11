@@ -1,0 +1,87 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const os=require('node:os');
+const path=require('node:path');
+const {createHash}=require('node:crypto');
+// Never infer a test database from the developer's real MONGODB_URI.
+test('isolated MongoDB: both portals, evidence, feedback, reopening, announcements and revoked sessions', {skip: !process.env.TEST_MONGODB_URI && 'Set TEST_MONGODB_URI to a disposable replica-set database named campuspulse_test_*.'}, async()=>{
+  const uri=process.env.TEST_MONGODB_URI;
+  const dbName=new URL(uri).pathname.slice(1);
+  assert.match(dbName,/^campuspulse_test_[a-z\d_-]+$/i,'Refusing non-test database.');
+  process.env.MONGODB_URI=uri;process.env.JWT_SECRET='integration-test-secret-more-than-thirty-two-characters';process.env.APP_ORIGIN='http://localhost:3000';process.env.STORAGE_DRIVER='local';process.env.SCANNER_DRIVER='development';process.env.EMAIL_DRIVER='development';process.env.NODE_ENV='test';
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'campuspulse-integration-'));process.env.PRIVATE_DATA_DIR=root;
+  const mongoose=require('mongoose'),{NextRequest}=require('next/server');
+  const {dbConnect}=require('../../src/lib/mongodb.ts');await dbConnect();
+  const User=require('../../src/models/User.ts').default,Grievance=require('../../src/models/Grievance.ts').default,Feedback=require('../../src/models/ResolutionFeedback.ts').default,Reopen=require('../../src/models/ReopenRequest.ts').default,Attachment=require('../../src/models/Attachment.ts').default,Notification=require('../../src/models/Notification.ts').default,Session=require('../../src/models/Session.ts').default,Outbox=require('../../src/models/OutboxJob.ts').default,Announcement=require('../../src/models/Announcement.ts').default;
+  const {hashPassword}=require('../../src/lib/auth.ts'),{loginResponse}=require('../../src/services/session.ts'),{authenticate}=require('../../src/lib/api.ts'),{handleV2}=require('../../src/services/v2.ts'),{runOneJob}=require('../../src/services/worker.ts');
+  const grievances=require('../../src/app/api/grievances/route.ts'),detail=require('../../src/app/api/grievances/[id]/route.ts'),logout=require('../../src/app/api/auth/logout/route.ts');
+  const request=(method,url,cookie,data)=>new NextRequest('http://localhost:3000'+url,{method,headers:{cookie,origin:'http://localhost:3000','Content-Type':'application/json'},...(data===undefined?{}:{body:JSON.stringify(data)})});
+  const call=(op,method,cookie,data,params={})=>handleV2(request(method,'/api/test',cookie,data),op,params);
+  try{
+    await mongoose.connection.dropDatabase();
+    for(const m of Object.values(mongoose.models))await m.init();
+    const passwordHash=await hashPassword('TestPassword!123');
+    const [student,other,admin]=await User.create([{name:'Student',email:'student@example.invalid',passwordHash,role:'student',academicDepartment:'CS'},{name:'Other',email:'other@example.invalid',passwordHash,role:'student',academicDepartment:'Mechanical'},{name:'Admin',email:'admin@example.invalid',passwordHash,role:'admin'}]);
+    const cookie=async user=>(await loginResponse(user)).headers.get('set-cookie').split(';')[0];
+    const sc=await cookie(student),oc=await cookie(other),ac=await cookie(admin);
+    const analyticsRoute=require('../../src/app/api/analytics/route.ts');
+    const emptyAnalytics=await (await analyticsRoute.GET(request('GET','/api/analytics',ac))).json();
+    assert.equal(emptyAnalytics.total,0);assert.deepEqual(emptyAnalytics.categoryDistribution,[]);assert.deepEqual(emptyAnalytics.priorityDistribution,[]);
+    const legacy=await User.create({name:'Legacy disabled',email:'disabled@example.invalid',passwordHash,role:'student',disabled:true,emailNotifications:false});
+    await User.collection.updateOne({_id:legacy._id},{$unset:{emailVerified:1}});
+    const {backfillMissingUserFields}=require('../../src/services/migration.ts');await backfillMissingUserFields();await backfillMissingUserFields();
+    const preserved=await User.findById(legacy._id);assert.equal(preserved.disabled,true);assert.equal(preserved.emailNotifications,false);assert.equal(preserved.emailVerified,false);
+    const simultaneous=await Promise.all([grievances.POST(request('POST','/api/grievances',sc,{rawText:'Electrical power failure in Block D',priorityLabel:'High'})),grievances.POST(request('POST','/api/grievances',oc,{rawText:'Electrical power failure in Block D',priorityLabel:'High'}))]);
+    assert.deepEqual(simultaneous.map(r=>r.status),[201,201]);const simultaneousRecords=await Promise.all(simultaneous.map(r=>r.json()));const clustered=await Grievance.find({_id:{$in:simultaneousRecords.map(r=>r.grievance._id)}});assert.ok(clustered[0].incident);assert.equal(String(clustered[0].incident),String(clustered[1].incident));
+    const submitted=await grievances.POST(request('POST','/api/grievances',sc,{rawText:'WiFi not working in Block C',isAnonymous:true,priorityLabel:'High',mapLocation:{lat:18.464,lng:73.868}}));assert.equal(submitted.status,201);
+    const g=(await submitted.json()).grievance,gid=String(g._id);
+    assert.equal(g.mapLocation.lat,18.464);
+    const mapRoute=require('../../src/app/api/grievances/map/route.ts');
+    const ownMap=await (await mapRoute.GET(request('GET','/api/grievances/map?limit=200',sc))).json(),otherMap=await (await mapRoute.GET(request('GET','/api/grievances/map?limit=200',oc))).json(),adminMap=await (await mapRoute.GET(request('GET','/api/grievances/map?limit=200',ac))).json();
+    assert.ok(ownMap.reports.some(r=>r._id===gid&&r.mapLocation.lat===18.464));
+    assert.ok(!otherMap.reports.some(r=>r._id===gid));assert.equal(adminMap.reports.find(r=>r._id===gid).student,undefined);
+    const requestKey=require('crypto').randomUUID(),input={rawText:'Plumbing tap leak in Block B',isAnonymous:true};
+    const keyed=()=>{const req=request('POST','/api/grievances',sc,input);req.headers.set('Idempotency-Key',requestKey);return req;};
+    const firstKeyed=await grievances.POST(keyed()),retryKeyed=await grievances.POST(keyed());assert.equal(firstKeyed.status,201);assert.equal(retryKeyed.status,200);assert.equal((await firstKeyed.json()).grievance._id,(await retryKeyed.json()).grievance._id);
+    const changed=request('POST','/api/grievances',sc,{...input,rawText:'A completely different plumbing issue in Block B'});changed.headers.set('Idempotency-Key',requestKey);assert.equal((await grievances.POST(changed)).status,409);
+    assert.equal((await detail.GET(request('GET','/api/grievances/'+gid,oc),{params:{id:gid}})).status,403);
+    assert.equal((await call('attachments','GET',oc,undefined,{id:gid})).status,403);
+    const resolved=await detail.PATCH(request('PATCH','/api/grievances/'+gid,ac,{status:'Resolved'}),{params:{id:gid}});assert.equal(resolved.status,200);assert.equal((await resolved.json()).grievance.student,undefined);
+    assert.equal((await call('feedback','POST',sc,{rating:5,comment:'Resolved quickly'},{id:gid})).status,201);
+    assert.equal((await call('feedback','POST',sc,{rating:1},{id:gid})).status,409);
+    const reopen=await call('reopen','POST',sc,{reason:'The WiFi problem returned this afternoon.'},{id:gid});assert.equal(reopen.status,201);const rid=(await reopen.json()).record._id;
+    const decisions=await Promise.all([call('reopen-decision','POST',ac,{state:'approved',decisionReason:'The issue is recurring.'},{id:rid}),call('reopen-decision','POST',ac,{state:'rejected',decisionReason:'Review is complete.'},{id:rid})]);assert.equal(decisions.filter(r=>r.status===200).length,1);assert.equal(decisions.filter(r=>r.status===409).length,1);
+    const decided=await Reopen.findById(rid),report=await Grievance.findById(gid);assert.equal(report.status,decided.state==='approved'?'In Progress':'Resolved');
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+    const intent=await call('attachments','POST',sc,{name:'evidence.png',mime:'image/png',size:png.length,checksum:createHash('sha256').update(png).digest('hex')},{id:gid});assert.equal(intent.status,201);const aid=(await intent.json()).attachment._id;
+    const uploadReq=new NextRequest('http://localhost:3000/api/upload',{method:'PUT',headers:{cookie:sc,origin:'http://localhost:3000','Content-Type':'image/png'},body:png});
+    assert.equal((await handleV2(uploadReq,'upload',{attachmentId:aid})).status,200);assert.equal((await call('complete','POST',sc,{}, {attachmentId:aid})).status,202);
+    for(let i=0;i<30;i++){if((await Attachment.findById(aid)).state==='clean')break;await runOneJob();}
+    const ready=await Attachment.findById(aid);assert.equal(ready.state,'clean');assert.equal(ready.scan,'development-unscanned');
+    assert.equal((await call('access','GET',oc,undefined,{attachmentId:aid})).status,403);assert.equal((await call('access','GET',sc,undefined,{attachmentId:aid})).status,200);
+    assert.equal((await call('review','PATCH',ac,{review:'accepted',reviewNote:'Relevant evidence'},{attachmentId:aid})).status,200);
+    assert.equal((await call('attachment','DELETE',sc,undefined,{attachmentId:aid})).status,409);
+    const draft=await call('announcements','POST',ac,{title:'CS maintenance',message:'CS network maintenance is scheduled.',audience:'academic-department',department:'CS'});assert.equal(draft.status,201);const ann=(await draft.json()).announcement;
+    assert.equal((await call('publish','POST',ac,{}, {id:ann._id})).status,200);assert.equal((await call('publish','POST',ac,{}, {id:ann._id})).status,200);
+    for(let i=0;i<50;i++)if(!await runOneJob())break;
+    assert.equal(await Notification.countDocuments({user:student._id,announcement:ann._id}),1);assert.equal(await Notification.countDocuments({user:other._id,announcement:ann._id}),0);
+    const own=await Notification.findOne({user:student._id});assert.equal((await call('read','PATCH',oc,{}, {id:String(own._id)})).status,200);assert.equal((await Notification.findById(own._id)).read,false);
+    assert.equal((await call('read','PATCH',sc,{}, {id:String(own._id)})).status,200);assert.equal((await Notification.findById(own._id)).read,true);
+    assert.equal((await call('satisfaction','GET',ac)).status,200);
+    const analyticsResponse=await analyticsRoute.GET(request('GET','/api/analytics',ac));assert.equal(analyticsResponse.status,200);
+    const analytics=await analyticsResponse.json();
+    assert.equal(analytics.total,await Grievance.countDocuments({}));
+    assert.equal(analytics.active+analytics.resolved,analytics.total);
+    assert.equal(analytics.categoryDistribution.reduce((n,r)=>n+r.count,0),analytics.total);
+    assert.equal(analytics.priorityDistribution.reduce((n,r)=>n+r.count,0),analytics.total);
+    assert.equal(analytics.criticalActive,await Grievance.countDocuments({status:{$ne:'Resolved'},priorityLabel:'Critical'}));
+    assert.ok(analytics.categoryDistribution.every(r=>typeof r.category==='string'&&Number.isInteger(r.count)&&r.count>0));
+    assert.ok(analytics.priorityDistribution.every(r=>typeof r.priority==='string'&&Number.isInteger(r.count)&&r.count>0));
+    await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/chart-integration-analytics.json',JSON.stringify(analytics,null,2));
+    assert.equal((await logout.POST(request('POST','/api/auth/logout',sc,{}))).status,200);await assert.rejects(authenticate(request('GET','/api/auth/me',sc)),/session has ended/);
+  }finally{
+    // Database name was validated above and is exclusively disposable.
+    await mongoose.connection.dropDatabase();await mongoose.disconnect();assert.ok(path.resolve(root).startsWith(path.resolve(os.tmpdir())+path.sep));await fs.rm(root,{recursive:true,force:true});
+  }
+});

@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { disconnectSocket } from "@/lib/socketClient";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
+      disconnectSocket();
       localStorage.setItem("cp_token", data.token);
       localStorage.setItem("cp_user", JSON.stringify(data.user));
       router.push("/student");
@@ -72,7 +74,8 @@ export default function RegisterPage() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={10}
+              maxLength={72}
               value={form.password}
               onChange={(e) => update("password", e.target.value)}
               className="cp-input"

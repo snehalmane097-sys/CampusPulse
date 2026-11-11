@@ -9,7 +9,7 @@ export default function GrievanceCard({ grievance, index = 0 }: { grievance: Gri
       className="glass-card glass-card-hover p-4 animate-rise"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm leading-relaxed flex-1 break-words">{grievance.rawText}</p>
+        <p className="text-sm leading-relaxed flex-1 min-w-0 break-words">{grievance.rawText}</p>
         <StatusBadge status={grievance.status} />
       </div>
       <div className="flex flex-wrap items-center gap-2 mt-3">

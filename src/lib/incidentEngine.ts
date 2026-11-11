@@ -7,14 +7,14 @@ import { calculatePriorityScore, scoreToLabel, explainPriority } from "@/lib/pri
 // to see whether this new one describes the same underlying problem. If so,
 // folds it into that Incident (creating one on first match) rather than
 // leaving every report as an independent ticket — this is the PDF's core USP.
-export async function clusterAndScore(grievance: IGrievance) {
+export async function clusterAndScore(grievance: IGrievance, session?: any) {
   const candidates = await Grievance.find({
     _id: { $ne: grievance._id },
     category: grievance.category,
     location: grievance.location,
     status: { $ne: "Resolved" },
     createdAt: { $gte: new Date(Date.now() - 1000 * 60 * 60 * 72) }, // last 72h
-  }).limit(50);
+  }).sort({ createdAt: -1 }).limit(50).session(session || null);
 
   const related = candidates.filter((c) => isLikelyDuplicate(grievance, c));
 
@@ -23,26 +23,32 @@ export async function clusterAndScore(grievance: IGrievance) {
 
   if (related.length > 0) {
     // Reuse an existing incident if any related grievance already has one.
-    const existingIncidentId = related.find((r) => r.incident)?.incident;
+    let existingIncident: any = null;
+    for (const relatedId of Array.from(new Set(related.filter(r => r.incident).map(r => String(r.incident))))) {
+      existingIncident = await Incident.findById(relatedId).session(session || null);
+      if (existingIncident) break;
+    }
 
     affectedCount = related.length + 1;
 
-    if (existingIncidentId) {
-      const incident = await Incident.findById(existingIncidentId);
+    if (existingIncident) {
+      const incident = existingIncident;
       if (incident) {
-        incident.grievances.push(grievance._id as any);
+        const ids = new Set(incident.grievances.map(String));
+        for (const candidate of [grievance, ...related.filter(r => !r.incident || String(r.incident) === String(incident._id))]) if (!ids.has(String(candidate._id))) { incident.grievances.push(candidate._id as any); ids.add(String(candidate._id)); }
         incident.grievanceCount = incident.grievances.length;
+        affectedCount = incident.grievanceCount;
         incident.severityScore = Math.min(100, incident.severityScore + 6);
-        await incident.save();
+        await incident.save({ session });
         incidentId = incident._id;
         // Backfill: link any related grievance that wasn't attached yet.
         await Grievance.updateMany(
           { _id: { $in: related.map((r) => r._id) }, incident: null },
-          { $set: { incident: incident._id } }
+          { $set: { incident: incident._id } }, { session }
         );
       }
     } else {
-      const incident = await Incident.create({
+      const [incident] = await Incident.create([{
         title: `${grievance.location} ${grievance.category} Issue`,
         category: grievance.category,
         location: grievance.location,
@@ -51,11 +57,11 @@ export async function clusterAndScore(grievance: IGrievance) {
         grievanceCount: related.length + 1,
         severityScore: 40,
         status: "Pending",
-      });
+      }], { session });
       incidentId = incident._id;
       await Grievance.updateMany(
         { _id: { $in: related.map((r) => r._id) } },
-        { $set: { incident: incident._id } }
+        { $set: { incident: incident._id } }, { session }
       );
     }
   }
@@ -82,13 +88,13 @@ export async function clusterAndScore(grievance: IGrievance) {
 // In Progress as soon as any one of them is, Pending otherwise. Called after
 // any grievance status change. Returns the updated incident, or null if
 // nothing changed (so callers can skip an unnecessary socket emit).
-export async function syncIncidentStatus(incidentId: string) {
+export async function syncIncidentStatus(incidentId: string, session?: any) {
   const incident = await Incident.findById(incidentId).populate<{ grievances: IGrievance[] }>(
     "grievances"
-  );
+  ).session(session || null);
   if (!incident) return null;
 
-  const statuses = incident.grievances.map((g: any) => g.status as string);
+  const statuses = incident.grievances.filter(Boolean).map((g: any) => g.status as string);
   let nextStatus: IIncident["status"] = "Pending";
   if (statuses.length > 0 && statuses.every((s) => s === "Resolved")) {
     nextStatus = "Resolved";
@@ -99,6 +105,6 @@ export async function syncIncidentStatus(incidentId: string) {
   if (incident.status === nextStatus) return null;
 
   incident.status = nextStatus;
-  await incident.save();
+  await incident.save({ session });
   return incident;
 }

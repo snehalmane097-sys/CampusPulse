@@ -27,5 +27,6 @@ const IncidentSchema = new Schema<IIncident>(
   },
   { timestamps: true }
 );
+IncidentSchema.index({ status: 1, severityScore: -1 });
 
 export default (models.Incident as mongoose.Model<IIncident>) || model<IIncident>("Incident", IncidentSchema);

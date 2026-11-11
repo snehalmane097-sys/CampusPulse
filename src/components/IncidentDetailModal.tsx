@@ -3,6 +3,8 @@
 import { IncidentDetailDTO } from "@/types";
 import { StatusBadge, PriorityBadge } from "./Badges";
 import { IconClock, IconMapPin, IconUsers } from "./Icons";
+import GrievanceDetailPanel from "./GrievanceDetailPanel";
+import { useState, useEffect } from "react";
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -19,6 +21,8 @@ export default function IncidentDetailModal({
   incident: IncidentDetailDTO | null;
   onClose: () => void;
 }) {
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  useEffect(() => { setSelectedReport(null); }, [incident?._id]);
   if (!incident) return null;
 
   // Union of every linked report's reasons, in first-seen order — the
@@ -83,7 +87,7 @@ export default function IncidentDetailModal({
           {incident.reports.map((r, i) => (
             <div key={r._id} className="border border-white/10 rounded-lg p-3 bg-white/[0.02]">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm">
+                <p className="text-sm min-w-0 break-words">
                   {r.isAnonymous ? (
                     <span className="text-slate-soft italic">Anonymous report #{i + 1}: </span>
                   ) : (
@@ -94,12 +98,14 @@ export default function IncidentDetailModal({
                 <StatusBadge status={r.status} />
               </div>
               <div className="mt-2 flex items-center gap-2">
+                <button className="cp-secondary" onClick={() => setSelectedReport(r._id)}>Evidence & details</button>
                 <PriorityBadge priority={r.priorityLabel} score={r.priorityScore} />
                 <span className="text-[11px] text-slate-soft">{timeAgo(r.createdAt)}</span>
               </div>
             </div>
           ))}
         </div>
+        {selectedReport && <GrievanceDetailPanel id={selectedReport} admin onClose={() => setSelectedReport(null)}/>}
 
         <button
           onClick={onClose}

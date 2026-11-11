@@ -15,6 +15,10 @@ export interface GrievanceDTO {
   isAnonymous: boolean;
   incident?: string | null;
   createdAt: string;
+  resolutionCycle?: number;
+  resolvedAt?: string;
+  attachmentCount?: number;
+  mapLocation?: import("@/lib/campusMap").MapLocation;
 }
 
 export interface IncidentDTO {
@@ -58,6 +62,7 @@ export interface EarlyWarningDTO {
 }
 
 export interface AnalyticsDTO {
+  criticalActive?: number;
   total: number;
   active: number;
   resolved: number;
@@ -67,8 +72,8 @@ export interface AnalyticsDTO {
   hotspots: {
     location: string;
     count: number;
-    lat: number;
-    lng: number;
+    lat: number | null;
+    lng: number | null;
     activeIncidents: number;
     highestPriority: GrievancePriority | null;
   }[];

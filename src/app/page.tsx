@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { disconnectSocket } from "@/lib/socketClient";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function LandingPage() {
         setLoading(false);
         return;
       }
+      disconnectSocket();
       localStorage.setItem("cp_token", data.token);
       localStorage.setItem("cp_user", JSON.stringify(data.user));
       router.push(data.user.role === "admin" ? "/admin" : "/student");
