@@ -1,3 +1,7 @@
+**Visual refresh:** Use [docs/DESIGN_REFRESH.md](docs/DESIGN_REFRESH.md) for the new login entries, light-theme portal layouts, focused Campus Radar and current validation limits. The map building editor is intentionally no longer available; use existing approved locations for acceptance.
+
+**Admin workflow update:** The Live Feed action is now **View Complaint**. Evidence and the single status/update-note control are in the complaint workspace; feedback, reopening, history and verified origin controls remain in expandable sections. Follow [docs/ADMIN_GRIEVANCE_UX.md](docs/ADMIN_GRIEVANCE_UX.md) for the current acceptance steps and known browser/build blockers.
+
 # CampusPulse 2.0 manual acceptance-testing guide
 
 Prepared from the actual working tree on **10 November 2026**, branch **feature/campuspulse-2.0**.

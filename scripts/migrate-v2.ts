@@ -14,9 +14,11 @@ import OutboxJob from "@/models/OutboxJob";
 import EmailVerificationToken from "@/models/EmailVerificationToken";
 import { backfillMissingUserFields } from "@/services/migration";
 import ClusterLock from "@/models/ClusterLock";
+import CampusBuilding from "@/models/CampusBuilding";
+import BuildingAssignment from "@/models/BuildingAssignment";
 async function main() {
   await dbConnect();
-  const models = [User, Grievance, Notification, Incident, Session, RateLimit, Attachment, Announcement, ResolutionFeedback, ReopenRequest, OutboxJob, EmailVerificationToken, ClusterLock];
+  const models = [User, Grievance, Notification, Incident, Session, RateLimit, Attachment, Announcement, ResolutionFeedback, ReopenRequest, OutboxJob, EmailVerificationToken, ClusterLock, CampusBuilding, BuildingAssignment];
   const dry = !process.argv.includes("--apply");
   console.log(dry ? "DRY RUN: no writes. Pass --apply after backup." : "Applying additive CampusPulse 2.0 migration.");
   const counts = { users: await User.countDocuments(), grievances: await Grievance.countDocuments(), notifications: await Notification.countDocuments() }; console.log(counts);

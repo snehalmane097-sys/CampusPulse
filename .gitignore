@@ -44,3 +44,6 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 *.log
+
+# Local Codex configuration
+.codex/

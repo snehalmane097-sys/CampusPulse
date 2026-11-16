@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import PortalHeading from "@/components/PortalHeading";
 import Navbar from "@/components/Navbar";
 import GrievanceForm from "@/components/GrievanceForm";
 import GrievanceCard from "@/components/GrievanceCard";
@@ -20,6 +21,7 @@ export default function StudentDashboard() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [grievances, setGrievances] = useState<GrievanceDTO[]>([]);
+  const [reportTotal, setReportTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedGrievance, setSelectedGrievance] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -33,7 +35,7 @@ export default function StudentDashboard() {
     try {
       const data = await readFeedWindow(api, "/api/grievances", "grievances", pages.current);
       if (version !== feedVersion.current) return;
-      setGrievances(data.grievances); setCursor(data.nextCursor); setActiveTotal(data.summary.active); setLoadError("");
+      setGrievances(data.grievances); setCursor(data.nextCursor); setActiveTotal(data.summary.active); setReportTotal(data.summary.total); setLoadError("");
     } catch(e: any) { if (version === feedVersion.current) setLoadError(e.message); }
     finally { if (version === feedVersion.current) setLoading(false); }
   }, []);
@@ -52,8 +54,8 @@ export default function StudentDashboard() {
           setGrievances(prev => prev.map(g => g._id === grievanceId ? { ...g, status } : g));
           loadGrievances(t); push('Your grievance is now "' + status + '"', status === "Resolved" ? "success" : "info");
         };
-        socket.on("connect", reconnect); socket.on("grievance:statusChanged", changed);
-        cleanup = () => { socket.off("connect", reconnect); socket.off("grievance:statusChanged", changed); };
+        socket.on("grievance:buildingChanged", reconnect); socket.on("connect", reconnect); socket.on("grievance:statusChanged", changed);
+        cleanup = () => { socket.off("grievance:buildingChanged", reconnect); socket.off("connect", reconnect); socket.off("grievance:statusChanged", changed); };
       } catch(e: any) { if (!cancelled) setLoadError(e.message); }
     })();
     return () => { cancelled = true; invalidateFeed(); cleanup(); };
@@ -63,51 +65,22 @@ export default function StudentDashboard() {
 
   const activeCount = activeTotal;
 
-  return (
-    <div className="min-h-screen">
-      <Navbar userName={user.name} role="student" onOpenGrievance={setSelectedGrievance}/>
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-        {/* Hero */}
-        <div className="glass-card p-8 text-center sm:text-left animate-rise">
-          <p className="text-sm text-slate-soft">Welcome back, {user.name.split(" ")[0]}</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-semibold mt-1">
-            What&apos;s happening on campus?
-          </h1>
-          <p className="text-slate-soft mt-2">
-            {activeCount === 0
-              ? "You have no open grievances right now."
-              : `${activeCount} grievance${activeCount === 1 ? "" : "s"} being tracked.`}
-          </p>
-          <a
-            href="#report-form"
-            className="inline-block mt-5 bg-signal text-ink font-semibold rounded-lg px-6 py-2.5 hover:bg-signal-dim transition-colors"
-          >
-            Report an issue
-          </a>
-        </div>
-
-        <GrievanceForm token={token!} onSubmitted={() => loadGrievances(token!)} onOpenGrievance={setSelectedGrievance} />
-
-        <div>
-          {loadError && <p role="alert" className="text-critical text-sm mb-3">{loadError}<button className="underline ml-2" onClick={() => { setLoadError(""); loadGrievances(token!); }}>Retry</button></p>}
-          <h2 className="font-display text-lg font-semibold mb-3">Your grievances</h2>
-          {loading ? (
-            <SkeletonFeed />
-          ) : grievances.length === 0 ? (
-            <p className="text-slate-soft text-sm">Nothing submitted yet — report an issue above.</p>
-          ) : (
-            <div className="space-y-3">
-              {grievances.map((g, i) => (
-                <div key={g._id}><GrievanceCard grievance={g} index={i}/><button className="cp-secondary mt-2" onClick={() => setSelectedGrievance(g._id)}>Evidence, feedback & details</button></div>
-              ))}
-            </div>
-          )}
-        </div>
-        {cursor && <button className="cp-secondary" onClick={async () => { try { pages.current++; await loadGrievances(token!); } catch(e: any) { setLoadError(e.message); } }}>Load older grievances</button>}
-        <CampusHub admin={false} onOpenGrievance={setSelectedGrievance}/>
-      </main>
-      {selectedGrievance && <GrievanceDetailPanel id={selectedGrievance} admin={false} onClose={() => setSelectedGrievance(null)} onChanged={() => loadGrievances(token!)}/>}
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
-    </div>
-  );
+  return <div className="min-h-screen">
+    <Navbar userName={user.name} role="student" onOpenGrievance={setSelectedGrievance}/>
+    <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-8">
+      <PortalHeading eyebrow={"Welcome back, "+user.name.split(" ")[0]} title="A better campus starts with you." description="Report a concern, add the details that matter and follow its progress from here."><a href="#report-form" className="cp-primary">Report an issue <span aria-hidden="true">＋</span></a></PortalHeading>
+      <div className="flex flex-wrap items-center gap-6 sm:gap-10 border-y border-ink-line py-5"><div className="flex items-baseline gap-3"><strong className="font-display text-2xl">{loading?"—":activeCount}</strong><span className="text-sm text-slate-soft">Active complaints</span></div><div className="flex items-baseline gap-3"><strong className="font-display text-2xl">{loading?"—":reportTotal}</strong><span className="text-sm text-slate-soft">Total submitted</span></div><p className="text-xs text-slate-soft sm:ml-auto">Your reports. Your progress.</p></div>
+      <div className="grid xl:grid-cols-[1.1fr_1fr] gap-6 lg:gap-8 items-start">
+        <GrievanceForm token={token!} onSubmitted={()=>loadGrievances(token!)} onOpenGrievance={setSelectedGrievance}/>
+        <section className="space-y-4 min-w-0"><div><p className="text-xs uppercase tracking-[0.14em] text-slate-soft mb-2">Track & follow up</p><h2 className="font-display text-xl font-semibold">Your complaints</h2></div>
+          {loadError&&<p role="alert" className="text-critical text-sm">{loadError}<button className="underline ml-2" onClick={()=>{setLoadError("");loadGrievances(token!);}}>Retry</button></p>}
+          {loading?<SkeletonFeed/>:grievances.length===0?<div className="cp-empty">No complaints submitted yet. Use the form to tell us what needs attention.</div>:<div className="space-y-4">{grievances.map(g=><GrievanceCard key={g._id} grievance={g} onOpen={setSelectedGrievance}/>)}</div>}
+          {cursor&&<button className="cp-secondary w-full" onClick={async()=>{try{pages.current++;await loadGrievances(token!);}catch(e:any){setLoadError(e.message);}}}>Load older grievances</button>}
+        </section>
+      </div>
+      <CampusHub admin={false} onOpenGrievance={setSelectedGrievance}/>
+    </main>
+    {selectedGrievance&&<GrievanceDetailPanel id={selectedGrievance} admin={false} onClose={()=>setSelectedGrievance(null)} onChanged={()=>loadGrievances(token!)}/>}
+    <ToastStack toasts={toasts} onDismiss={dismiss}/>
+  </div>;
 }

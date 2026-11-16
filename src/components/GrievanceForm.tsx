@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import VoiceInput from "./VoiceInput";
+import BuildingSelector from "./BuildingSelector";
 
 import { GrievanceDTO } from "@/types";
 import { PriorityBadge } from "./Badges";
@@ -25,6 +26,7 @@ export default function GrievanceForm({ token, onSubmitted, onOpenGrievance }: P
   const [success, setSuccess] = useState<GrievanceDTO | null>(null);
   const [error, setError] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [buildingId, setBuildingId] = useState("");
   const [uploadProgress, setUploadProgress] = useState("");
   const submissionKey = useRef<string | null>(null);
   const [showMap, setShowMap] = useState(false), [mapLocation, setMapLocation] = useState<MapLocation | null>(null), [locationPending, setLocationPending] = useState(false), [mapRefresh, setMapRefresh] = useState(0);
@@ -43,7 +45,7 @@ export default function GrievanceForm({ token, onSubmitted, onOpenGrievance }: P
       const res = await fetch("/api/grievances", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": submissionKey.current ||= crypto.randomUUID(), Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ rawText: text, priorityLabel, isAnonymous, submittedVia, ...(mapLocation ? { mapLocation } : {}) }),
+        body: JSON.stringify({ rawText: text, priorityLabel, isAnonymous, submittedVia, ...(mapLocation ? { mapLocation } : {}), ...(buildingId ? { buildingId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -54,6 +56,7 @@ export default function GrievanceForm({ token, onSubmitted, onOpenGrievance }: P
       setSuccess(data.grievance);
       submissionKey.current = null;
       setText("");
+      setBuildingId("");
       setMapLocation(null); setLocationPending(false); setMapRefresh(v => v + 1);
       const failed: File[] = [];
       for (const file of files) {
@@ -129,6 +132,7 @@ export default function GrievanceForm({ token, onSubmitted, onOpenGrievance }: P
         </label>
       </div>
 
+      <BuildingSelector value={buildingId} onChange={setBuildingId} disabled={submitting}/>
       <div className="space-y-2">
         <button type="button" className="cp-secondary" disabled={submitting} aria-expanded={showMap} onClick={() => setShowMap(v => !v)}>{showMap ? "Hide campus map" : "Explore campus / choose issue location (optional)"}</button>
         {showMap && <CampusMap selection={mapLocation} refreshKey={mapRefresh} onOpenGrievance={onOpenGrievance} onSelectionPending={() => setLocationPending(true)} onLocationConfirm={p => { setMapLocation(p); setLocationPending(false); }}/>}

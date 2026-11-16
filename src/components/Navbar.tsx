@@ -6,6 +6,9 @@ import NotificationCenter from "./NotificationCenter";
 import { disconnectSocket } from "@/lib/socketClient";
 import { api } from "@/lib/client";
 import { useState } from "react";
+import Link from "next/link";
+import Brand from "./Brand";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar({ userName, role, onOpenGrievance }: { userName: string; role: "student" | "admin"; onOpenGrievance?: (id: string) => void }) {
   const router = useRouter();
@@ -22,23 +25,22 @@ export default function Navbar({ userName, role, onOpenGrievance }: { userName: 
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/10 bg-ink/80 backdrop-blur-xl">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
+    <header className="sticky top-0 z-20 border-b border-ink-line bg-ink-panel/95 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex flex-wrap gap-3 items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-signal shadow-[0_0_12px_2px_rgba(62,217,163,0.6)]" />
-          <span className="font-display font-semibold tracking-tight">CampusPulse</span>
-          <span className="ml-3 flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border border-white/10 text-slate-soft uppercase">
+          <Link href={role==="admin"?"/admin":"/student"} aria-label="CampusPulse workspace"><Brand compact/></Link>
+          <span className="ml-3 hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg bg-ink-raised text-slate-soft capitalize">
             {role === "admin" ? <IconShield className="w-3 h-3" /> : <IconSparkles className="w-3 h-3" />}
             {role}
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <NotificationCenter onOpenGrievance={onOpenGrievance}/>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeToggle/><NotificationCenter onOpenGrievance={onOpenGrievance}/>
           <span className="text-sm text-slate-soft hidden sm:inline">{userName}</span>
           <button
             onClick={logout}
             disabled={loggingOut}
-            className="text-sm text-slate-soft hover:text-ivory border border-white/10 rounded-lg px-3 py-1.5 transition-colors hover:border-white/30"
+            className="text-sm text-slate-soft hover:text-ivory border border-ink-line rounded-lg px-3 py-1.5 transition-colors hover:border-signal/35"
           >
             {loggingOut ? "Signing out…" : "Sign out"}
           </button>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import PortalHeading from "@/components/PortalHeading";
 import Navbar from "@/components/Navbar";
 import IncidentCard from "@/components/IncidentCard";
 import IncidentDetailModal from "@/components/IncidentDetailModal";
@@ -10,10 +11,10 @@ import EarlyWarningPanel from "@/components/EarlyWarningPanel";
 import ToastStack from "@/components/ToastStack";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { SkeletonFeed, SkeletonKPIs } from "@/components/Skeletons";
-import { PriorityBadge, StatusBadge } from "@/components/Badges";
+import AdminGrievanceCard from "@/components/AdminGrievanceCard";
 import { CategoryChart, PriorityChart, TrendChart, LocationChart } from "@/components/AnalyticsCharts";
 import { IconLayers, IconActivity, IconRadar, IconChart, IconAlertTriangle, IconCheckCircle } from "@/components/Icons";
-import { GrievanceDTO, IncidentDTO, IncidentDetailDTO, AnalyticsDTO, GrievanceStatus } from "@/types";
+import { GrievanceDTO, IncidentDTO, IncidentDetailDTO, AnalyticsDTO } from "@/types";
 import { getSocket } from "@/lib/socketClient";
 import { useToastQueue } from "@/lib/useToastQueue";
 import GrievanceDetailPanel from "@/components/GrievanceDetailPanel";
@@ -37,7 +38,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("overview");
   const [selectedIncident, setSelectedIncident] = useState<IncidentDetailDTO | null>(null);
-  const [expandedReasons, setExpandedReasons] = useState<string | null>(null);
   const [selectedGrievance, setSelectedGrievance] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
@@ -82,29 +82,12 @@ export default function AdminDashboard() {
         const newReport = ({ grievance }) => { setGrievances(prev => [grievance, ...prev.filter(g => g._id !== grievance._id)]); push('New ' + grievance.category.toLowerCase() + ' report - ' + grievance.location, "info"); scheduleRefresh(); };
         const statusChanged = ({ grievanceId, status }) => { setGrievances(prev => prev.map(g => g._id === grievanceId ? { ...g, status } : g)); scheduleRefresh(); };
         const incidentChanged = (payload) => { if (payload?.status === "Resolved") push("An incident was fully resolved.", "success"); scheduleRefresh(); };
-        socket.on("connect", reconnect); socket.on("grievance:new", newReport); socket.on("grievance:statusChanged", statusChanged); socket.on("incident:updated", incidentChanged);
-        cleanup = () => { socket.off("connect", reconnect); socket.off("grievance:new", newReport); socket.off("grievance:statusChanged", statusChanged); socket.off("incident:updated", incidentChanged); if (refreshTimer.current) clearTimeout(refreshTimer.current); };
+        socket.on("grievance:buildingChanged", reconnect); socket.on("connect", reconnect); socket.on("grievance:new", newReport); socket.on("grievance:statusChanged", statusChanged); socket.on("incident:updated", incidentChanged);
+        cleanup = () => { socket.off("grievance:buildingChanged", reconnect); socket.off("connect", reconnect); socket.off("grievance:new", newReport); socket.off("grievance:statusChanged", statusChanged); socket.off("incident:updated", incidentChanged); if (refreshTimer.current) clearTimeout(refreshTimer.current); };
       } catch(e: any) { if (!cancelled) setLoadError(e.message); }
     })();
     return () => { cancelled = true; invalidateFeed(); cleanup(); };
   }, [router, loadAll, scheduleRefresh, push, invalidateFeed]);
-
-  async function updateStatus(id: string, status: GrievanceStatus) {
-    try {
-    const res = await fetch(`/api/grievances/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
-      setGrievances((prev) => prev.map((g) => (g._id === id ? { ...g, status } : g)));
-      push(`Status updated to "${status}"`, "success");
-      scheduleRefresh();
-    } else {
-      const data = await res.json().catch(() => ({})); push(data.error || "Could not update status - please retry.", "warning");
-    }
-    } catch { push("Could not reach the server. Please retry.", "warning"); }
-  }
 
   async function openIncident(id: string) {
     try { setSelectedIncident((await api(`/api/incidents/${id}`)).incident); } catch(e: any) { push(e.message, "warning"); }
@@ -117,15 +100,16 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen">
       <Navbar userName={user.name} role="admin" onOpenGrievance={setSelectedGrievance}/>
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-8">
         {loadError && <p role="alert" className="text-critical">{loadError}<button className="underline ml-3" onClick={() => loadAll(token!)}>Retry</button></p>}
+        <PortalHeading eyebrow="Campus operations" title="The campus, at a glance." description="Prioritize concerns, coordinate resolutions and keep your campus moving."/>
         {loading ? (
           <SkeletonKPIs />
         ) : (
           <KPIStrip analytics={analytics} criticalCount={criticalCount} />
         )}
 
-        <nav className="flex gap-1.5 border-b border-white/10 overflow-x-auto">
+        <nav className="cp-tabs" aria-label="Admin workspace navigation">
           {(
             [
               ["overview", "Overview", IconActivity],
@@ -140,8 +124,8 @@ export default function AdminDashboard() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-                tab === key ? "border-signal text-signal" : "border-transparent text-slate-soft hover:text-ivory"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${
+                tab === key ? "bg-signal/10 text-signal" : "text-slate-soft hover:bg-ink-raised hover:text-ivory"
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -182,73 +166,7 @@ export default function AdminDashboard() {
             ) : grievances.length === 0 ? (
               <p className="text-slate-soft text-sm">No grievances yet.</p>
             ) : (
-              grievances.map((g, i) => (
-                <div
-                  key={g._id}
-                  style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
-                  className="glass-card p-4 animate-rise"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm leading-relaxed flex-1 break-words">
-                      {g.rawText}
-                      {g.isAnonymous && (
-                        <span className="ml-2 text-xs text-slate-soft font-mono">(anonymous)</span>
-                      )}
-                    </p>
-                    <StatusBadge status={g.status} />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedReasons(expandedReasons === g._id ? null : g._id)}
-                      className="inline-flex"
-                      title="Why this priority?"
-                    >
-                      <PriorityBadge priority={g.priorityLabel} score={g.priorityScore} />
-                    </button>
-                    <span className="text-xs font-mono text-slate-soft border border-white/10 rounded-full px-2.5 py-1">
-                      {g.category}
-                    </span>
-                    <span className="text-xs font-mono text-slate-soft border border-white/10 rounded-full px-2.5 py-1">
-                      {g.location}
-                    </span>
-                    <span className="text-xs font-mono text-slate-soft border border-white/10 rounded-full px-2.5 py-1">
-                      → {g.department}
-                    </span>
-                    {g.affectedCount > 1 && (
-                      <span className="text-xs font-mono text-amber border border-amber/30 bg-amber/10 rounded-full px-2.5 py-1">
-                        {g.affectedCount} linked reports
-                      </span>
-                    )}
-
-                    <div className="ml-auto flex gap-1.5 flex-wrap">
-                      <button className="cp-secondary" onClick={() => setSelectedGrievance(g._id)}>Evidence & resolution</button>
-                      {(["Pending", "In Progress", "Resolved"] as const).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => updateStatus(g._id, s)}
-                          disabled={g.status === s || g.status === "Resolved"}
-                          className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${
-                            g.status === s
-                              ? "border-signal/30 text-signal/60 cursor-default"
-                              : "border-white/10 text-slate-soft hover:border-signal hover:text-signal"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {expandedReasons === g._id && g.priorityReasons && g.priorityReasons.length > 0 && (
-                    <ul className="mt-3 text-xs text-slate-soft space-y-1 border-t border-white/10 pt-3">
-                      {g.priorityReasons.map((r, ri) => (
-                        <li key={ri}>• {r}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+              grievances.map(g => <AdminGrievanceCard key={g._id} grievance={g} onOpen={setSelectedGrievance}/>)
             )}
           </div>
         )}
@@ -289,7 +207,7 @@ export default function AdminDashboard() {
         {tab === "community" && <CampusHub admin onOpenGrievance={setSelectedGrievance}/>}
         {tab === "feed" && cursor && <button className="cp-secondary" onClick={async () => { try { pages.current++; await loadAll(token!); } catch(e: any) { setLoadError(e.message); } }}>Load older grievances</button>}
       </main>
-      {selectedGrievance && <GrievanceDetailPanel id={selectedGrievance} admin onClose={() => setSelectedGrievance(null)} onChanged={scheduleRefresh}/>}
+      {selectedGrievance && <GrievanceDetailPanel id={selectedGrievance} admin onClose={() => setSelectedGrievance(null)} onChanged={scheduleRefresh} onOpenIncident={openIncident}/>}
 
       <IncidentDetailModal incident={selectedIncident} onClose={() => setSelectedIncident(null)} />
       <ToastStack toasts={toasts} onDismiss={dismiss} />

@@ -3,76 +3,94 @@
 @tailwind utilities;
 
 :root {
-  --font-display: "Space Grotesk", sans-serif;
-  --font-body: "Inter", sans-serif;
+  --font-display: "Manrope", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-}
+  color-scheme: light;
+  --cp-canvas: 245 246 250;
+  --cp-surface: 255 255 255;
+  --cp-raised: 238 241 247;
+  --cp-line: 221 226 238;
+  --cp-text: 32 40 62;
+  --cp-muted: 98 111 133;
+  --cp-primary: 79 70 229;
+  --cp-primaryHover: 64 56 190;
+  --cp-secondary: 50 106 150;
+  --cp-accent: 166 83 50;
+  --cp-success: 32 118 91;
+  --cp-pending: 140 86 20;
+  --cp-progress: 73 95 173;
+  --cp-danger: 173 52 76;
 
-html {
-  scroll-behavior: smooth;
 }
+html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
+body { @apply bg-ink text-ivory; font-family: var(--font-body); }
+* { -webkit-tap-highlight-color: transparent; }
+::selection { @apply bg-signal/15 text-signal; }
+:focus-visible { @apply outline outline-2 outline-offset-2 outline-signal; }
+input, select, textarea, button { font: inherit; }
+input[type="checkbox"], input[type="radio"] { accent-color: theme('colors.signal.DEFAULT'); }
+button, a, input, select, textarea { touch-action: manipulation; }
+button { @apply disabled:cursor-not-allowed; }
+summary { @apply py-1 marker:text-slate-soft; }
+summary:focus-visible { border-radius: 4px; }
+summary + * { margin-top: 0.75rem; }
+progress { @apply rounded-full overflow-hidden; }
+table { border-collapse: collapse; }
+th { @apply bg-ink-raised/60 text-slate-soft font-semibold text-xs; }
+th, td { @apply px-3 py-3 text-left align-top; }
+tbody tr { @apply border-b border-ink-line; }
+tbody tr:last-child { border-bottom: 0; }
 
-body {
-  background-color: #0e141b;
-  color: #edf1f4;
-  font-family: var(--font-body);
-}
-
-::selection {
-  background: #3ed9a3;
-  color: #0e141b;
-}
-
-/* Respect reduced-motion preferences across the whole app. */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* Visible keyboard focus ring, styled to match the signal accent. */
-:focus-visible {
-  outline: 2px solid #3ed9a3;
-  outline-offset: 2px;
-}
-
-.leaflet-container {
-  background: #161e27 !important;
-  border-radius: 0.75rem;
-}
-
-.cp-campus-map .leaflet-control-attribution {
-  max-width: 65%;
-  white-space: normal;
-}
+.leaflet-container { background: #EEF1F7 !important; border-radius: 16px; font-family: var(--font-body); }
+.cp-campus-map .leaflet-control-attribution { max-width: 65%; white-space: normal; font-size: 10px; }
+.cp-campus-map .leaflet-tooltip { border: 1px solid #DDE2EE; border-radius: 8px; color: #20283E; box-shadow: 0 2px 8px #20283E10; }
+.cp-campus-map .leaflet-popup-content-wrapper { border-radius: 14px; color: #20283E; }
 .cp-map-pin { font-size: 28px; line-height: 36px; }
+.cp-dialog { box-shadow: 0 24px 90px rgba(32,40,62,.18); overscroll-behavior: contain; }
+.cp-dialog::backdrop { background: rgba(32,40,62,.38); backdrop-filter: blur(3px); }
 
 @layer components {
-  .cp-primary {
-    @apply rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-signal-dim disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  .cp-secondary {
-    @apply rounded-lg border border-white/15 px-3 py-2 text-sm text-ivory transition-colors hover:border-signal hover:text-signal disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  .cp-input {
-    @apply w-full bg-ink-panel border border-ink-line rounded-lg px-3.5 py-2.5 text-ivory placeholder:text-slate-soft/60 focus:border-signal outline-none transition-colors;
-  }
-
-  /* Glassmorphism surface for the command-center redesign: a translucent
-     panel over the ink background rather than a flat solid card. */
-  .glass-card {
-    @apply relative rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl;
-    background-image: linear-gradient(135deg, rgba(62, 217, 163, 0.06), rgba(79, 195, 247, 0.03) 60%, transparent);
-  }
-
-  .glass-card-hover {
-    @apply transition-all duration-300 hover:border-white/20 hover:bg-white/[0.05] hover:-translate-y-0.5;
-  }
-
-  .skeleton {
-    @apply rounded-lg bg-ink-raised bg-[length:800px_100%] bg-no-repeat animate-shimmer;
-    background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
-  }
+  .cp-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-signal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-dim disabled:opacity-50 disabled:cursor-not-allowed; }
+  .cp-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-ink-line bg-ink-panel px-3.5 py-2.5 text-sm font-medium text-ivory transition-colors hover:border-signal/40 hover:bg-signal/5 hover:text-signal disabled:opacity-50 disabled:cursor-not-allowed; }
+  .cp-input { @apply w-full min-w-0 bg-ink-panel border border-ink-line rounded-xl px-3.5 py-3 text-sm text-ivory placeholder:text-slate-soft/70 focus:border-signal focus:ring-2 focus:ring-signal/10 outline-none transition-colors disabled:bg-ink-raised/60; }
+  .glass-card { @apply relative rounded-2xl border border-ink-line bg-ink-panel; box-shadow: 0 3px 18px rgba(32,40,62,.025); }
+  .glass-card-hover { @apply transition-colors duration-150 hover:border-signal/25; }
+  .cp-tabs { @apply flex gap-1 overflow-x-auto rounded-2xl border border-ink-line bg-ink-panel p-1.5; }
+  .cp-empty { @apply rounded-2xl border border-dashed border-ink-line bg-ink-panel p-8 text-sm text-slate-soft text-center; }
+  .skeleton { @apply rounded-xl bg-ink-raised bg-[length:800px_100%] bg-no-repeat animate-shimmer; background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); }
 }
+
+@media (max-width: 640px) {
+  .cp-dialog { max-height: 94dvh; width: 96vw; border-radius: 18px; }
+  .cp-dialog > div { padding: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-canvas: 15 20 33;
+  --cp-surface: 24 32 49;
+  --cp-raised: 33 43 64;
+  --cp-line: 64 77 101;
+  --cp-text: 234 239 249;
+  --cp-muted: 174 187 210;
+  --cp-primary: 167 159 255;
+  --cp-primaryHover: 187 181 255;
+  --cp-secondary: 130 194 238;
+  --cp-accent: 239 164 132;
+  --cp-success: 110 216 173;
+  --cp-pending: 244 195 111;
+  --cp-progress: 159 181 255;
+  --cp-danger: 255 151 171;
+}
+
+:root[data-theme="dark"] .cp-primary { color: #151a2b; }
+.cp-campus-map .leaflet-tooltip, .cp-campus-map .leaflet-popup-content-wrapper,
+.cp-campus-map .leaflet-popup-tip, .cp-campus-map .leaflet-bar a,
+.cp-campus-map .leaflet-control-attribution { background: rgb(var(--cp-surface)); color: rgb(var(--cp-text)); border-color: rgb(var(--cp-line)); }
+.cp-campus-map .leaflet-control-attribution a { color: rgb(var(--cp-primary)); }
+.recharts-text { fill: rgb(var(--cp-muted)); }

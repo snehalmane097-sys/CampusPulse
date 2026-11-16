@@ -19,6 +19,10 @@ export interface GrievanceDTO {
   resolvedAt?: string;
   attachmentCount?: number;
   mapLocation?: import("@/lib/campusMap").MapLocation;
+  building?: string;
+  buildingRevision?: number;
+  originDepartment?: string;
+  origin?: { department: string | null; building: { _id: string; displayName: string } | null };
 }
 
 export interface IncidentDTO {

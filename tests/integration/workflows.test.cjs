@@ -16,6 +16,8 @@ test('isolated MongoDB: both portals, evidence, feedback, reopening, announcemen
   const User=require('../../src/models/User.ts').default,Grievance=require('../../src/models/Grievance.ts').default,Feedback=require('../../src/models/ResolutionFeedback.ts').default,Reopen=require('../../src/models/ReopenRequest.ts').default,Attachment=require('../../src/models/Attachment.ts').default,Notification=require('../../src/models/Notification.ts').default,Session=require('../../src/models/Session.ts').default,Outbox=require('../../src/models/OutboxJob.ts').default,Announcement=require('../../src/models/Announcement.ts').default;
   const {hashPassword}=require('../../src/lib/auth.ts'),{loginResponse}=require('../../src/services/session.ts'),{authenticate}=require('../../src/lib/api.ts'),{handleV2}=require('../../src/services/v2.ts'),{runOneJob}=require('../../src/services/worker.ts');
   const grievances=require('../../src/app/api/grievances/route.ts'),detail=require('../../src/app/api/grievances/[id]/route.ts'),logout=require('../../src/app/api/auth/logout/route.ts');
+  const Building=require('../../src/models/CampusBuilding.ts').default,buildingRoute=require('../../src/app/api/buildings/route.ts'),buildingEdit=require('../../src/app/api/buildings/[id]/route.ts'),buildingStats=require('../../src/app/api/buildings/analytics/route.ts');
+  const Assignment=require('../../src/models/BuildingAssignment.ts').default,assignmentRoute=require('../../src/app/api/grievances/[id]/building/route.ts');
   const request=(method,url,cookie,data)=>new NextRequest('http://localhost:3000'+url,{method,headers:{cookie,origin:'http://localhost:3000','Content-Type':'application/json'},...(data===undefined?{}:{body:JSON.stringify(data)})});
   const call=(op,method,cookie,data,params={})=>handleV2(request(method,'/api/test',cookie,data),op,params);
   try{
@@ -25,6 +27,11 @@ test('isolated MongoDB: both portals, evidence, feedback, reopening, announcemen
     const [student,other,admin]=await User.create([{name:'Student',email:'student@example.invalid',passwordHash,role:'student',academicDepartment:'CS'},{name:'Other',email:'other@example.invalid',passwordHash,role:'student',academicDepartment:'Mechanical'},{name:'Admin',email:'admin@example.invalid',passwordHash,role:'admin'}]);
     const cookie=async user=>(await loginResponse(user)).headers.get('set-cookie').split(';')[0];
     const sc=await cookie(student),oc=await cookie(other),ac=await cookie(admin);
+    // The two visual login entry points share the existing server-enforced credential flow.
+    const loginRoute=require('../../src/app/api/auth/login/route.ts');
+    const studentLogin=await loginRoute.POST(request('POST','/api/auth/login','',{email:student.email,password:'TestPassword!123',role:'admin'}));assert.equal(studentLogin.status,200);assert.equal((await studentLogin.json()).user.role,'student');assert.match(studentLogin.headers.get('set-cookie'),/HttpOnly/i);
+    const adminLogin=await loginRoute.POST(request('POST','/api/auth/login','',{email:admin.email,password:'TestPassword!123'}));assert.equal(adminLogin.status,200);assert.equal((await adminLogin.json()).user.role,'admin');
+    assert.equal((await loginRoute.POST(request('POST','/api/auth/login','',{email:student.email,password:'WrongPassword!123'}))).status,401);
     const analyticsRoute=require('../../src/app/api/analytics/route.ts');
     const emptyAnalytics=await (await analyticsRoute.GET(request('GET','/api/analytics',ac))).json();
     assert.equal(emptyAnalytics.total,0);assert.deepEqual(emptyAnalytics.categoryDistribution,[]);assert.deepEqual(emptyAnalytics.priorityDistribution,[]);
@@ -59,8 +66,12 @@ test('isolated MongoDB: both portals, evidence, feedback, reopening, announcemen
     assert.equal((await handleV2(uploadReq,'upload',{attachmentId:aid})).status,200);assert.equal((await call('complete','POST',sc,{}, {attachmentId:aid})).status,202);
     for(let i=0;i<30;i++){if((await Attachment.findById(aid)).state==='clean')break;await runOneJob();}
     const ready=await Attachment.findById(aid);assert.equal(ready.state,'clean');assert.equal(ready.scan,'development-unscanned');
+    assert.equal((await call('review','PATCH',ac,{review:'rejected',reviewNote:''},{attachmentId:aid})).status,400);
+    assert.equal((await call('review','PATCH',sc,{review:'accepted'},{attachmentId:aid})).status,403);
     assert.equal((await call('access','GET',oc,undefined,{attachmentId:aid})).status,403);assert.equal((await call('access','GET',sc,undefined,{attachmentId:aid})).status,200);
     assert.equal((await call('review','PATCH',ac,{review:'accepted',reviewNote:'Relevant evidence'},{attachmentId:aid})).status,200);
+    assert.equal((await call('review','PATCH',ac,{review:'rejected',reviewNote:'Not relevant to this issue'},{attachmentId:aid})).status,200);assert.equal((await Attachment.findById(aid)).review,'rejected');
+    assert.equal((await call('review','PATCH',ac,{review:'accepted',reviewNote:'Reviewed again'},{attachmentId:aid})).status,200);
     assert.equal((await call('attachment','DELETE',sc,undefined,{attachmentId:aid})).status,409);
     const draft=await call('announcements','POST',ac,{title:'CS maintenance',message:'CS network maintenance is scheduled.',audience:'academic-department',department:'CS'});assert.equal(draft.status,201);const ann=(await draft.json()).announcement;
     assert.equal((await call('publish','POST',ac,{}, {id:ann._id})).status,200);assert.equal((await call('publish','POST',ac,{}, {id:ann._id})).status,200);
@@ -79,6 +90,114 @@ test('isolated MongoDB: both portals, evidence, feedback, reopening, announcemen
     assert.ok(analytics.categoryDistribution.every(r=>typeof r.category==='string'&&Number.isInteger(r.count)&&r.count>0));
     assert.ok(analytics.priorityDistribution.every(r=>typeof r.priority==='string'&&Number.isInteger(r.count)&&r.count>0));
     await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/chart-integration-analytics.json',JSON.stringify(analytics,null,2));
+    // Names below are disposable test fixtures, never real campus mappings.
+    const inputBuilding={featureId:'way/223964767',displayName:'Integration fixture building',category:'Academic',code:'TEST',description:'Disposable test metadata',approved:true};
+    assert.equal((await Grievance.findById(gid)).building,undefined,'Existing pin must not infer an association.');
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings',sc,inputBuilding))).status,403);
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,featureId:'way/unknown'}))).status,400);
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,featureId:'way/213874316'}))).status,400);
+    const createdBuilding=await buildingRoute.POST(request('POST','/api/buildings',ac,inputBuilding));assert.equal(createdBuilding.status,201);const bid=(await createdBuilding.json()).id;
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,displayName:'Another name for same footprint'}))).status,409);
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,featureId:'way/223964769',displayName:'INTEGRATION FIXTURE BUILDING'}))).status,409);
+    const draftBuilding=await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,featureId:'way/223964769',displayName:'Draft fixture name',approved:false}));assert.equal(draftBuilding.status,201);const draftId=(await draftBuilding.json()).id;
+    let studentBuildings=(await (await buildingRoute.GET(request('GET','/api/buildings',sc))).json()).buildings;
+    assert.equal(studentBuildings.find(b=>b._id===bid).displayName,inputBuilding.displayName);assert.ok(!studentBuildings.some(b=>b._id===draftId));
+    const {featureId:ignoredFeature,...editFields}=inputBuilding;void ignoredFeature;
+    const rename={...editFields,displayName:'Renamed integration fixture',revision:0};
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+bid,sc,rename),{params:{id:bid}})).status,403);
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+bid,ac,rename),{params:{id:bid}})).status,200);
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+bid,ac,rename),{params:{id:bid}})).status,409);
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+bid,ac,{...rename,revision:1,geometry:{}}),{params:{id:bid}})).status,400);
+    studentBuildings=(await (await buildingRoute.GET(request('GET','/api/buildings',sc))).json()).buildings;
+    assert.equal(studentBuildings.find(b=>b._id===bid).displayName,rename.displayName);assert.equal((await Building.findById(bid)).featureId,inputBuilding.featureId);
+    assert.equal((await grievances.POST(request('POST','/api/grievances',sc,{rawText:'Test building report',buildingId:draftId}))).status,400);
+    assert.equal((await grievances.POST(request('POST','/api/grievances',sc,{rawText:'Test building report',buildingId:new mongoose.Types.ObjectId().toString()}))).status,400);
+    const buildingSubmission=await grievances.POST(request('POST','/api/grievances',sc,{rawText:'Network connection test in building',buildingId:bid,isAnonymous:true,mapLocation:{lat:18.464,lng:73.868}}));assert.equal(buildingSubmission.status,201);
+    const bg=(await buildingSubmission.json()).grievance;assert.equal(bg.building,bid);assert.equal(bg.mapLocation.lat,18.464);
+    const changedBuilding=request('POST','/api/grievances',sc,{...input,buildingId:bid});changedBuilding.headers.set('Idempotency-Key',requestKey);assert.equal((await grievances.POST(changedBuilding)).status,409);
+    // Deterministic status/priority fixtures are written only to this disposable database.
+    await Grievance.findByIdAndUpdate(bg._id,{$set:{status:'Pending',priorityLabel:'High',category:'Network',createdAt:new Date('2026-11-01T12:00:00Z')}});
+    await Grievance.create([{student:other._id,rawText:'Other fixture',building:bid,status:'In Progress',priorityLabel:'Critical',category:'Electrical',createdAt:new Date('2026-11-02T12:00:00Z')},{student:student._id,rawText:'Resolved fixture',building:bid,status:'Resolved',priorityLabel:'Low',category:'Network',createdAt:new Date('2026-11-03T12:00:00Z')}]);
+    const stats=async(cookie,query='')=>{const res=await buildingStats.GET(request('GET','/api/buildings/analytics'+query,cookie));assert.equal(res.status,200);return(await res.json()).summaries.find(s=>s.buildingId===bid);};
+    const adminSummary=await stats(ac);assert.equal(adminSummary.total,3);assert.equal(adminSummary.open,1);assert.equal(adminSummary.inProgress,1);assert.equal(adminSummary.resolved,1);assert.equal(adminSummary.highPriority,2);assert.equal(adminSummary.categories.reduce((n,c)=>n+c.count,0),3);
+    assert.deepEqual(Object.keys(adminSummary).sort(),['buildingId','total','open','inProgress','resolved','highPriority','categories'].sort());
+    assert.equal(adminSummary.total,await Grievance.countDocuments({building:bid}));assert.equal((await stats(sc)).total,2);assert.equal((await stats(oc)).total,1);
+    assert.equal((await stats(ac,'?status=open')).total,2);assert.equal((await stats(ac,'?priority=Critical')).total,1);assert.equal((await stats(ac,'?category=Network')).total,2);assert.equal((await stats(ac,'?from=2026-11-02&to=2026-11-02')).total,1);
+    assert.equal((await buildingStats.GET(request('GET','/api/buildings/analytics?from=2026-02-30',ac))).status,400);
+    const associatedMap=(await(await mapRoute.GET(request('GET','/api/grievances/map?buildingId='+bid,sc))).json()).reports;assert.equal(associatedMap.length,2);assert.ok(associatedMap.every(r=>r.building===bid));assert.ok(associatedMap.every(r=>!('student' in r)&&!('attachments' in r)&&!('history' in r)));
+    const filteredMap=(await(await mapRoute.GET(request('GET','/api/grievances/map?buildingId='+bid+'&priority=Critical',ac))).json()).reports;assert.equal(filteredMap.length,1);
+    assert.equal((await detail.GET(request('GET','/api/grievances/'+bg._id,oc),{params:{id:bg._id}})).status,403);
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+bg._id,ac,{status:'Resolved'}),{params:{id:bg._id}})).status,200);assert.equal((await stats(ac)).resolved,2);
+    // A legacy AIML department/location/text is not a physical association.
+    const legacyReport=await Grievance.create({student:student._id,isAnonymous:true,rawText:'AIML laboratory fixture issue',department:'AIML',location:'AIML lab',category:'Facilities',status:'Pending',mapLocation:{lat:18.464,lng:73.868}});
+    await Grievance.collection.updateOne({_id:legacyReport._id},{$unset:{buildingRevision:1}});
+    assert.equal((await stats(ac)).total,3);assert.equal(legacyReport.building,undefined);
+    const aidUrl='/api/grievances/'+legacyReport._id+'/building',params={params:Promise.resolve({id:String(legacyReport._id)})};
+    const assign=(cookie,buildingId,expectedRevision,reason='Verified physical location using test evidence')=>assignmentRoute.PATCH(request('PATCH',aidUrl,cookie,{buildingId,expectedRevision,reason}),params);
+    assert.equal((await assign(sc,bid,0)).status,403);assert.equal((await assign(ac,draftId,0)).status,400);assert.equal((await assign(ac,new mongoose.Types.ObjectId().toString(),0)).status,400);
+    assert.equal((await assign(ac,bid,0,'')).status,400);
+    const crossAssignment=request('PATCH',aidUrl,ac,{buildingId:bid,expectedRevision:0,reason:'Verified location'});crossAssignment.headers.set('origin','http://untrusted.invalid');assert.equal((await assignmentRoute.PATCH(crossAssignment,params)).status,403);
+    const events=[],originalIO=global.__campuspulse_io;global.__campuspulse_io={to:room=>({emit:(name,payload)=>events.push({room,name,payload})})};
+    try {assert.equal((await assign(ac,bid,0)).status,200);}finally{global.__campuspulse_io=originalIO;}
+    assert.equal(events.length,2);assert.ok(events.every(e=>e.name==='grievance:buildingChanged'&&Object.keys(e.payload).join()==='grievanceId'));
+    assert.equal((await stats(ac)).total,4);assert.equal(await Assignment.countDocuments({grievance:legacyReport._id}),1);
+    let linked=await Grievance.findById(legacyReport._id);assert.equal(linked.buildingRevision,1);assert.equal(linked.location,'AIML lab');assert.equal(linked.department,'AIML');assert.equal(linked.mapLocation.lat,18.464);assert.equal(linked.status,'Pending');assert.equal(linked.isAnonymous,true);
+    assert.equal((await assign(ac,bid,0)).status,409);assert.equal((await assign(ac,bid,1)).status,200);assert.equal(await Assignment.countDocuments({grievance:legacyReport._id}),1);
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+draftId,ac,{...editFields,displayName:'Draft fixture name',approved:true,revision:0}),{params:{id:draftId}})).status,200);
+    assert.equal((await assign(ac,draftId,1)).status,200);assert.equal((await stats(ac)).total,3);
+    assert.equal((await assign(ac,null,2,'Cleared unverified location')).status,200);linked=await Grievance.findById(legacyReport._id);assert.equal(linked.building,undefined);assert.equal(linked.buildingRevision,3);
+    const competing=await Promise.all([assign(ac,bid,3),assign(ac,draftId,3)]);assert.deepEqual(competing.map(r=>r.status).sort(),[200,409]);
+    assert.equal((await assign(ac,null,4)).status,200);assert.equal(await Assignment.countDocuments({grievance:legacyReport._id}),5);
+    const publicDetail=(await(await detail.GET(request('GET','/api/grievances/'+legacyReport._id,ac),{params:{id:String(legacyReport._id)}})).json()).grievance;assert.equal(publicDetail.student,undefined);assert.equal(publicDetail.buildingAssignments,undefined);assert.equal(publicDetail.reason,undefined);
+    assert.equal(publicDetail.origin.department,null);assert.equal(publicDetail.origin.building,null,'Routing and text must never masquerade as verified origin.');
+    const verifiedOrigin=await assignmentRoute.PATCH(request('PATCH',aidUrl,ac,{buildingId:bid,originDepartment:'Verified test origin',expectedRevision:5,reason:'Verified both origin fields using test evidence'}),params);assert.equal(verifiedOrigin.status,200);
+    const originDetail=await (await detail.GET(request('GET','/api/grievances/'+legacyReport._id,ac),{params:{id:String(legacyReport._id)}})).json();
+    assert.equal(originDetail.grievance.origin.department,'Verified test origin');assert.equal(originDetail.grievance.origin.building.displayName,rename.displayName);assert.equal(originDetail.grievance.department,'AIML');assert.equal(originDetail.buildingChanges[0].department,'Verified test origin');assert.equal(originDetail.buildingChanges[0].actor,undefined);
+    const feedWithOrigin=await(await grievances.GET(request('GET','/api/grievances?limit=200',ac))).json();assert.equal(feedWithOrigin.grievances.find(r=>r._id===String(legacyReport._id)).origin.building.displayName,rename.displayName);
+    const mapWithOrigin=await(await mapRoute.GET(request('GET','/api/grievances/map?limit=200',ac))).json();assert.equal(mapWithOrigin.reports.find(r=>r._id===String(legacyReport._id)).origin.building.displayName,rename.displayName);
+    let noteReport=await Grievance.findById(legacyReport._id);const version=noteReport.__v;
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,ac,{status:'Pending',note:'Internal investigation fixture',expectedVersion:version}),{params:{id:String(legacyReport._id)}})).status,200);
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,ac,{status:'Resolved',expectedVersion:version}),{params:{id:String(legacyReport._id)}})).status,409);
+    const ownerDetail=await(await detail.GET(request('GET','/api/grievances/'+legacyReport._id,sc),{params:{id:String(legacyReport._id)}})).json();assert.equal(ownerDetail.buildingChanges,undefined);assert.ok(ownerDetail.grievance.history.every(h=>h.note===undefined&&h.actor===undefined));
+    noteReport=await Grievance.findById(legacyReport._id);assert.equal(noteReport.history.at(-1).note,'Internal investigation fixture');assert.equal(noteReport.status,'Pending');
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,sc,{status:'Resolved',note:'Student cannot review'}),{params:{id:String(legacyReport._id)}})).status,403);
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,ac,{status:'In Progress',note:'Investigation started'}),{params:{id:String(legacyReport._id)}})).status,200);
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,ac,{status:'Resolved',note:'Investigation complete'}),{params:{id:String(legacyReport._id)}})).status,200);
+    noteReport=await Grievance.findById(legacyReport._id);const resolvedTime=noteReport.resolvedAt.getTime(),cycle=noteReport.resolutionCycle;
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+legacyReport._id,ac,{status:'Resolved',note:'Follow-up internal note'}),{params:{id:String(legacyReport._id)}})).status,200);
+    noteReport=await Grievance.findById(legacyReport._id);assert.equal(noteReport.resolvedAt.getTime(),resolvedTime);assert.equal(noteReport.resolutionCycle,cycle);
+    assert.equal((await assignmentRoute.PATCH(request('PATCH',aidUrl,ac,{buildingId:null,originDepartment:null,expectedRevision:6,reason:'Clear verified test origin'}),params)).status,200);
+    assert.equal((await buildingEdit.PATCH(request('PATCH','/api/buildings/'+bid,ac,{...rename,approved:false,revision:1}),{params:{id:bid}})).status,200);
+    assert.equal((await Building.findById(bid)).approved,false);assert.equal((await Grievance.findById(bg._id)).building.toString(),bid);
+    assert.equal((await stats(sc)),undefined);assert.equal((await stats(ac)).total,3);
+    assert.equal((await buildingRoute.POST(request('POST','/api/buildings', '',inputBuilding))).status,401);
+    const crossOrigin=request('POST','/api/buildings',ac,inputBuilding);crossOrigin.headers.set('origin','http://untrusted.invalid');assert.equal((await buildingRoute.POST(crossOrigin)).status,403);
+    // Department origin comes only from the provisioned student profile, never routing or request overrides.
+    const departmentRoute=require('../../src/app/api/grievances/departments/route.ts');
+    const dept=async(cookie,query='')=>{const response=await departmentRoute.GET(request('GET','/api/grievances/departments'+query,cookie));assert.equal(response.status,200);return (await response.json()).departments;};
+    assert.equal((await departmentRoute.GET(request('GET','/api/grievances/departments',''))).status,401);
+    await User.updateOne({_id:student._id},{$set:{academicDepartment:'AIML'}});
+    const before=(await dept(ac)).find(d=>d.department==='AIML')?.total||0;
+    const freshResponse=await grievances.POST(request('POST','/api/grievances',sc,{rawText:'Disposable origin aggregation fixture',isAnonymous:true,originDepartment:'Forged routing origin'}));assert.equal(freshResponse.status,201);
+    const fresh=(await freshResponse.json()).grievance;
+    assert.equal((await Grievance.findById(fresh._id)).originDepartment,'AIML');assert.equal(fresh.building,undefined);
+    const after=(await dept(ac)).find(d=>d.department==='AIML');assert.equal(after.total,before+1);assert.equal(after.pending,1);
+    assert.equal((await dept(oc)).find(d=>d.department==='AIML'),undefined);
+    assert.ok((await dept(ac)).every(d=>Object.keys(d).every(k=>['department','total','pending','inProgress','resolved','highPriority'].includes(k))));
+    const originMap=await(await mapRoute.GET(request('GET','/api/grievances/map?originDepartment=AIML',ac))).json();assert.ok(originMap.reports.some(r=>r._id===fresh._id));assert.ok(originMap.reports.every(r=>r.origin.department==='AIML'&&!r.student));
+    const freshParams={params:Promise.resolve({id:fresh._id})};
+    const changeBuilding=async(buildingId,expectedRevision)=>assignmentRoute.PATCH(request('PATCH','/api/grievances/'+fresh._id+'/building',ac,{buildingId,expectedRevision,reason:'Explicit disposable verification'}),freshParams);
+    const countBuilding=async buildingId=>(await(await buildingStats.GET(request('GET','/api/buildings/analytics?originDepartment=AIML',ac))).json()).summaries.find(r=>r.buildingId===buildingId)?.total||0;
+    assert.equal(await countBuilding(draftId),0);
+    assert.equal((await changeBuilding(draftId,0)).status,200);assert.equal(await countBuilding(draftId),1);
+    // Admin analytics retains withdrawn records for audit, while the map shows approved buildings only.
+    assert.equal((await changeBuilding(bid,1)).status,400);
+    const thirdResponse=await buildingRoute.POST(request('POST','/api/buildings',ac,{...inputBuilding,featureId:'way/223964770',displayName:'Third disposable fixture'}));assert.equal(thirdResponse.status,201);const thirdId=(await thirdResponse.json()).building._id;
+    assert.equal((await changeBuilding(thirdId,1)).status,200);assert.equal(await countBuilding(draftId),0);assert.equal(await countBuilding(thirdId),1);
+    assert.equal((await changeBuilding(null,2)).status,200);assert.equal(await countBuilding(thirdId),0);
+    assert.equal((await detail.PATCH(request('PATCH','/api/grievances/'+fresh._id,ac,{status:'In Progress'}),{params:{id:fresh._id}})).status,200);
+    const progressed=(await dept(ac,'?status=In+Progress')).find(d=>d.department==='AIML');assert.equal(progressed.total,1);assert.equal(progressed.inProgress,1);
+    assert.equal((await dept(ac,'?status=Resolved')).find(d=>d.department==='AIML'),undefined);
     assert.equal((await logout.POST(request('POST','/api/auth/logout',sc,{}))).status,200);await assert.rejects(authenticate(request('GET','/api/auth/me',sc)),/session has ended/);
   }finally{
     // Database name was validated above and is exclusively disposable.

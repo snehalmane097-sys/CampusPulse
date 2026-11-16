@@ -1,4 +1,10 @@
+**Latest visual update:** [DESIGN_REFRESH.md](DESIGN_REFRESH.md) supersedes the older map-editor instructions below. Campus Radar now displays approved existing locations without any building-management/identification UI. Records, associations, geometry, APIs and model are preserved.
+
 # VIT Bibwewadi interactive campus map
+
+**Cleanup and legacy association update:** [MAP_CLEANUP.md](MAP_CLEANUP.md) documents the approved-only public location list, preserved private Admin footprint identification, existing-grievance building assignment/correction/removal, AIML diagnostic limits and regression checks.
+
+**Building management update (15 November 2026):** [BUILDING_MANAGEMENT.md](BUILDING_MANAGEMENT.md) describes persistent Admin-approved custom names, explicit grievance/building associations, privacy-scoped building indicators, filters, setup, tests and the footprint IDs awaiting actual identification. Geometry and the Leaflet lifecycle remain unchanged.
 
 **Analytics/satellite follow-up:** [ANALYTICS_AND_SATELLITE.md](ANALYTICS_AND_SATELLITE.md) records the missing local MapTiler configuration, exact setup/rebuild instructions, URL/attribution checks and current acceptance limits. A key must be an authorized browser-visible MapTiler key restricted to the application's HTTP origins; never commit it. The latest browser interaction was stopped by the user, so earlier browser results do not establish post-chart-fix acceptance.
 

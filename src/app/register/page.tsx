@@ -3,6 +3,8 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Brand from "@/components/Brand";
+import ThemeToggle from "@/components/ThemeToggle";
 import { disconnectSocket } from "@/lib/socketClient";
 
 export default function RegisterPage() {
@@ -43,26 +45,29 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16">
-      <div className="max-w-md w-full">
-        <div className="flex items-center gap-2 mb-10">
-          <span className="w-2.5 h-2.5 rounded-full bg-signal shadow-[0_0_12px_2px_rgba(62,217,163,0.6)]" />
-          <span className="font-display font-semibold tracking-tight text-lg">CampusPulse</span>
-        </div>
+      <div className="glass-card max-w-md w-full p-6 sm:p-9">
+        <Link href="/" aria-label="CampusPulse home" className="inline-block mb-8"><Brand/></Link><ThemeToggle/>
 
         <h1 className="font-display text-3xl font-semibold mb-2">Create an account</h1>
         <p className="text-slate-soft mb-8">Report and track campus issues.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Full name">
+          <Field label="Full name" id="register-name">
             <input
+              id="register-name"
+              autoComplete="name"
+              disabled={loading}
               required
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
               className="cp-input"
             />
           </Field>
-          <Field label="Email">
+          <Field label="Email" id="register-email">
             <input
+              id="register-email"
+              autoComplete="username"
+              disabled={loading}
               type="email"
               required
               value={form.email}
@@ -70,8 +75,11 @@ export default function RegisterPage() {
               className="cp-input"
             />
           </Field>
-          <Field label="Password">
+          <Field label="Password" id="register-password">
             <input
+              id="register-password"
+              autoComplete="new-password"
+              disabled={loading}
               type="password"
               required
               minLength={10}
@@ -91,7 +99,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-signal text-ink font-semibold rounded-lg py-2.5 hover:bg-signal-dim transition-colors disabled:opacity-60"
+            className="cp-primary w-full py-3"
           >
             {loading ? "Creating account…" : "Create account"}
           </button>
@@ -108,10 +116,10 @@ export default function RegisterPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm text-slate-soft mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium mb-2">{label}</label>
       {children}
     </div>
   );

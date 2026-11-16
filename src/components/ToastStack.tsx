@@ -4,7 +4,7 @@ import { Toast } from "@/lib/useToastQueue";
 import { IconCheckCircle, IconBell, IconAlertTriangle } from "./Icons";
 
 const TONE_STYLE: Record<Toast["tone"], string> = {
-  success: "border-signal/30 bg-signal/10 text-signal",
+  success: "border-success/30 bg-success/10 text-success",
   info: "border-cyan/30 bg-cyan/10 text-cyan",
   warning: "border-amber/30 bg-amber/10 text-amber",
 };
@@ -19,7 +19,7 @@ export default function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onD
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-2 max-w-xs w-full">
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:w-80 z-40 flex flex-col gap-2" aria-live="polite">
       {toasts.map((t) => {
         const Icon = TONE_ICON[t.tone];
         return (

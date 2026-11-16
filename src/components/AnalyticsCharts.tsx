@@ -4,16 +4,17 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
+import { THEME_COLORS as UI_COLORS, CHART_COLORS } from "@/lib/designTokens";
 import { AnalyticsDTO } from "@/types";
 import { chartLabel, chartState, chartTotal } from "@/lib/chartData";
 
-const CATEGORY_COLORS = ["#3ED9A3", "#F2A93B", "#E5555C", "#6FA8FF", "#C084FC", "#F472B6", "#8C99A8"];
+const CATEGORY_COLORS = CHART_COLORS;
 
 const tooltipStyle = {
-  background: "#1D2733",
-  border: "1px solid #2A3541",
+  background: UI_COLORS.surface,
+  border: "1px solid " + UI_COLORS.line,
   borderRadius: 8,
-  color: "#EDF1F4",
+  color: UI_COLORS.text,
   fontSize: 12,
 };
 
@@ -24,10 +25,10 @@ export function CategoryChart({ data, expectedTotal }: { data: AnalyticsDTO["cat
   return <figure className="min-w-0 w-full" aria-label="Grievances by category">
     <ResponsiveContainer width="100%" height={220} minWidth={0}>
       <BarChart data={rows}>
-        <CartesianGrid stroke="#2A3541" vertical={false} />
-        <XAxis dataKey="category" stroke="#8C99A8" fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis stroke="#8C99A8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <CartesianGrid stroke={UI_COLORS.line} vertical={false} />
+        <XAxis dataKey="category" stroke={UI_COLORS.muted} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis stroke={UI_COLORS.muted} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(79,70,229,0.04)" }} />
         <Bar dataKey="count" radius={[4, 4, 0, 0]}>
           {data.map((_, i) => (
             <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
@@ -44,17 +45,17 @@ export function PriorityChart({ data, expectedTotal }: { data: AnalyticsDTO["pri
   if (state !== "ready") return <ChartNotice state={state} name="grievance priority"/>;
   const rows = data.map(row => ({...row, priority: chartLabel(row.priority, "Unspecified priority")}));
   const colorFor: Record<string, string> = {
-    Low: "#3ED9A3",
-    Medium: "#F2A93B",
-    High: "#F2A93B",
-    Critical: "#E5555C",
+    Low: UI_COLORS.success,
+    Medium: UI_COLORS.pending,
+    High: UI_COLORS.accent,
+    Critical: UI_COLORS.danger,
   };
   return <figure className="min-w-0 w-full" aria-label="Priority distribution">
     <ResponsiveContainer width="100%" height={220} minWidth={0}>
       <PieChart>
         <Pie data={rows} dataKey="count" nameKey="priority" innerRadius={50} outerRadius={80} paddingAngle={2}>
           {data.map((d, i) => (
-            <Cell key={i} fill={colorFor[d.priority] || "#8C99A8"} />
+            <Cell key={i} fill={colorFor[d.priority] || UI_COLORS.muted} />
           ))}
         </Pie>
         <Tooltip contentStyle={tooltipStyle} />
@@ -70,11 +71,11 @@ export function TrendChart({ data }: { data: AnalyticsDTO["trend"] }) {
   return (
     <ResponsiveContainer width="100%" height={220} minWidth={0}>
       <LineChart data={data}>
-        <CartesianGrid stroke="#2A3541" vertical={false} />
-        <XAxis dataKey="date" stroke="#8C99A8" fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis stroke="#8C99A8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+        <CartesianGrid stroke={UI_COLORS.line} vertical={false} />
+        <XAxis dataKey="date" stroke={UI_COLORS.muted} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis stroke={UI_COLORS.muted} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Line type="monotone" dataKey="count" stroke="#3ED9A3" strokeWidth={2} dot={false} />
+        <Line type="monotone" dataKey="count" stroke={UI_COLORS.primary} strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -87,19 +88,19 @@ export function LocationChart({ data }: { data: AnalyticsDTO["hotspots"] }) {
   return (
     <ResponsiveContainer width="100%" height={220} minWidth={0}>
       <BarChart data={sorted} layout="vertical" margin={{ left: 8 }}>
-        <CartesianGrid stroke="#2A3541" horizontal={false} />
-        <XAxis type="number" stroke="#8C99A8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+        <CartesianGrid stroke={UI_COLORS.line} horizontal={false} />
+        <XAxis type="number" stroke={UI_COLORS.muted} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis
           type="category"
           dataKey="location"
-          stroke="#8C99A8"
+          stroke={UI_COLORS.muted}
           fontSize={11}
           tickLine={false}
           axisLine={false}
           width={80}
         />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-        <Bar dataKey="count" radius={[0, 4, 4, 0]} fill="#4FC3F7" />
+        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(79,70,229,0.04)" }} />
+        <Bar dataKey="count" radius={[0, 4, 4, 0]} fill={UI_COLORS.secondary} />
       </BarChart>
     </ResponsiveContainer>
   );

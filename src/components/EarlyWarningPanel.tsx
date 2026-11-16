@@ -2,7 +2,7 @@ import { EarlyWarningDTO } from "@/types";
 import { IconAlertTriangle, IconCheckCircle } from "./Icons";
 
 const SEVERITY_DOT: Record<EarlyWarningDTO["severity"], string> = {
-  High: "bg-critical animate-glowPulse",
+  High: "bg-critical",
   Medium: "bg-amber",
 };
 
@@ -18,14 +18,14 @@ export default function EarlyWarningPanel({ warnings }: { warnings: EarlyWarning
         <h3 className="font-display font-semibold flex items-center gap-2">
           <IconAlertTriangle className="w-4 h-4 text-amber" /> Early Warnings
         </h3>
-        <span className="text-[11px] font-mono text-slate-soft border border-white/10 rounded-full px-2 py-0.5">
-          rule-based, not ML
+        <span className="text-[11px] font-mono text-slate-soft border border-ink-line rounded-full px-2 py-0.5">
+          Campus signals
         </span>
       </div>
 
       {warnings.length === 0 ? (
         <p className="text-sm text-slate-soft flex items-center gap-2">
-          <IconCheckCircle className="w-4 h-4 text-signal" /> No emerging campus issues detected.
+          <IconCheckCircle className="w-4 h-4 text-success" /> No emerging campus issues detected.
         </p>
       ) : (
         <div className="space-y-2.5">
@@ -33,7 +33,7 @@ export default function EarlyWarningPanel({ warnings }: { warnings: EarlyWarning
             <div
               key={w.id}
               style={{ animationDelay: `${i * 60}ms` }}
-              className="animate-rise flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-3"
+              className="animate-rise flex items-start gap-3 rounded-lg border border-ink-line bg-ink-raised/40 px-3.5 py-3"
             >
               <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${SEVERITY_DOT[w.severity]}`} />
               <div className="min-w-0">

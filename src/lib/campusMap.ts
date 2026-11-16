@@ -41,7 +41,7 @@ export function reportCoordinates(g: { mapLocation?: MapLocation; location: stri
   return g.mapLocation && inSelectionArea(g.mapLocation.lat,g.mapLocation.lng) ? [g.mapLocation.lat,g.mapLocation.lng] : coordsFor(g.location);
 }
 export const CATEGORY_COLORS: Record<string,string> = {Network:"#56b4e9",Electrical:"#f2a93b",Plumbing:"#4dd4cf",Facilities:"#ba9cff",Academic:"#e6b7d6",Hostel:"#ec9473",Other:"#a2adb9"};
-export interface MapReport { _id: string; rawText: string; location: string; category: string; priorityLabel: string; status: string; createdAt: string; isAnonymous: boolean; incident?: string | null; mapLocation?: MapLocation; }
+export interface MapReport { _id: string; rawText: string; location: string; category: string; priorityLabel: string; status: string; createdAt: string; isAnonymous: boolean; incident?: string | null; mapLocation?: MapLocation; building?: string; origin?: import("@/types").GrievanceDTO["origin"]; }
 export function filterReports(reports: MapReport[], filters: {category:string;priority:string;status:string}) {
   return reports.filter(g=>(!filters.category || g.category===filters.category)&&(!filters.priority || g.priorityLabel===filters.priority)&&(!filters.status || (filters.status==="open" ? g.status!=="Resolved":g.status===filters.status)));
 }
