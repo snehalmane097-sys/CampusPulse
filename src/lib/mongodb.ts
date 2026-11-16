@@ -22,16 +22,17 @@ const globalWithMongoose = global as typeof globalThis & {
 const cached: CachedConnection =
   globalWithMongoose._campuspulseMongoose || { conn: null, promise: null };
 
+export function databaseOptions() { const automatic = process.env.NODE_ENV !== "production" && process.env.MIGRATION_READ_ONLY !== "true"; return { bufferCommands: false, serverSelectionTimeoutMS: 10000, autoIndex: automatic, autoCreate: automatic }; }
 export async function dbConnect() {
-  if (cached.conn) return cached.conn;
+  if (cached.conn?.connection.readyState === 1) return cached.conn;
+  if (cached.conn) { cached.conn = null; cached.promise = null; }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: false,
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, databaseOptions());
   }
 
-  cached.conn = await cached.promise;
+  try { cached.conn = await cached.promise; }
+  catch (error) { cached.promise = null; globalWithMongoose._campuspulseMongoose = cached; throw error; }
   globalWithMongoose._campuspulseMongoose = cached;
   return cached.conn;
 }

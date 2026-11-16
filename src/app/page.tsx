@@ -3,9 +3,14 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Brand from "@/components/Brand";
+import ThemeToggle from "@/components/ThemeToggle";
+import CampusIllustration from "@/components/CampusIllustration";
+import { disconnectSocket } from "@/lib/socketClient";
 
 export default function LandingPage() {
   const router = useRouter();
+  const [entry, setEntry] = useState<"student" | "admin">("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,6 +32,7 @@ export default function LandingPage() {
         setLoading(false);
         return;
       }
+      disconnectSocket();
       localStorage.setItem("cp_token", data.token);
       localStorage.setItem("cp_user", JSON.stringify(data.user));
       router.push(data.user.role === "admin" ? "/admin" : "/student");
@@ -36,142 +42,31 @@ export default function LandingPage() {
     }
   }
 
-  return (
-    <main className="min-h-screen grid lg:grid-cols-2">
-      {/* Left: message + login */}
-      <section className="flex flex-col justify-center px-8 sm:px-16 py-16">
-        <div className="max-w-md w-full mx-auto">
-          <div className="flex items-center gap-2 mb-10">
-            <span className="w-2.5 h-2.5 rounded-full bg-signal shadow-[0_0_12px_2px_rgba(62,217,163,0.6)]" />
-            <span className="font-display font-semibold tracking-tight text-lg">CampusPulse</span>
-          </div>
-
-          <h1 className="font-display text-4xl sm:text-5xl font-semibold leading-[1.1] mb-4">
-            One Wi-Fi outage.
-            <br />
-            Twenty tickets.
-            <br />
-            <span className="text-signal">One incident.</span>
-          </h1>
-          <p className="text-slate-soft mb-10 leading-relaxed">
-            CampusPulse reads every grievance as it lands, clusters the ones
-            describing the same problem, scores what needs attention first,
-            and routes it to the right department — live.
-          </p>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm text-slate-soft mb-1.5" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-ink-panel border border-ink-line rounded-lg px-3.5 py-2.5 text-ivory placeholder:text-slate-soft/60 focus:border-signal outline-none transition-colors"
-                placeholder="you@campus.edu"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-soft mb-1.5" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-ink-panel border border-ink-line rounded-lg px-3.5 py-2.5 text-ivory placeholder:text-slate-soft/60 focus:border-signal outline-none transition-colors"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <p className="text-critical text-sm bg-critical/10 border border-critical/30 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-signal text-ink font-semibold rounded-lg py-2.5 hover:bg-signal-dim transition-colors disabled:opacity-60"
-            >
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-
-          <p className="text-sm text-slate-soft mt-6">
-            New here?{" "}
-            <Link href="/register" className="text-signal hover:underline">
-              Create an account
-            </Link>
-          </p>
-        </div>
+  return <main className="min-h-screen bg-ink">
+    <header className="max-w-7xl mx-auto px-5 sm:px-10 py-6 flex flex-wrap gap-4 justify-between items-center"><Brand/><ThemeToggle/><span className="text-xs text-slate-soft">Vishwakarma Institute of Technology · Bibwewadi</span></header>
+    <div className="max-w-7xl mx-auto px-5 sm:px-10 pt-8 lg:pt-16 pb-12 grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-20 items-center">
+      <section className="max-w-xl">
+        <p className="text-xs font-semibold tracking-[0.18em] uppercase text-signal mb-5">Your campus. Your voice.</p>
+        <h1 className="font-display text-[clamp(2.8rem,5.5vw,4.7rem)] font-semibold tracking-[-0.045em] leading-[1.08]">Small concerns.<br/><span className="text-signal">Better campus.</span></h1>
+        <p className="text-base sm:text-lg text-slate-soft leading-relaxed max-w-md mt-6">Raise campus concerns, share evidence and follow every update. One clear path from reporting an issue to seeing it resolved.</p>
+        <CampusIllustration/>
+        <div className="flex items-center gap-3 text-xs text-slate-soft mt-1"><span className="h-px w-8 bg-accent/50"/>Report. Track. Resolve.</div>
       </section>
-
-      {/* Right: radar hero — the literal "Campus Issue Radar" from the brief */}
-      <section className="hidden lg:flex items-center justify-center bg-ink-panel relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(62,217,163,0.08),transparent_60%)]" />
-        <div className="relative w-[420px] h-[420px]">
-          {/* Concentric radar rings */}
-          {[1, 2, 3, 4].map((r) => (
-            <div
-              key={r}
-              className="absolute rounded-full border border-ink-line"
-              style={{
-                inset: `${r * 12.5}%`,
-              }}
-            />
-          ))}
-
-          {/* Sweep line */}
-          <div className="absolute inset-0 animate-sweep origin-center">
-            <div className="absolute top-1/2 left-1/2 w-1/2 h-[2px] bg-gradient-to-r from-signal to-transparent origin-left" />
-          </div>
-
-          {/* Hotspot blips, sized/positioned like the PDF's Block A/B/C example */}
-          <Blip top="30%" left="42%" size="w-3 h-3" label="Block A" intensity="low" />
-          <Blip top="58%" left="65%" size="w-4 h-4" label="Block B" intensity="mid" />
-          <Blip top="68%" left="35%" size="w-6 h-6" label="Block C" intensity="high" />
-
-          <div className="absolute top-1/2 left-1/2 w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ivory" />
-        </div>
-
-        <div className="absolute bottom-10 left-10 right-10 font-mono text-xs text-slate-soft flex justify-between">
-          <span>SCAN: CAMPUS_GRID</span>
-          <span className="text-signal">3 ACTIVE HOTSPOTS</span>
-        </div>
+      <section className="glass-card p-6 sm:p-9 lg:p-10 w-full max-w-lg mx-auto" aria-label="CampusPulse sign in">
+        <div role="group" aria-label="Login entry point" className="grid grid-cols-2 gap-1 bg-ink-raised/70 rounded-xl p-1 mb-8">{(["student","admin"] as const).map(v=><button key={v} type="button" aria-pressed={entry===v} onClick={()=>{setEntry(v);setError("");}} className={entry===v?"rounded-lg bg-ink-panel shadow-sm px-3 py-2.5 text-sm font-semibold text-signal":"rounded-lg px-3 py-2.5 text-sm text-slate-soft"}>{v==="student"?"Student Login":"Admin Login"}</button>)}</div>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-soft mb-2">{entry==="student"?"Student workspace":"Campus administration"}</p>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Welcome back</h2>
+        <p className="text-sm text-slate-soft mt-2 mb-7">{entry==="student"?"Sign in to submit and track your complaints.":"Sign in to review issues and coordinate resolutions."}</p>
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div><label className="block text-sm font-medium mb-2" htmlFor="email">Email address</label><input id="email" type="email" autoComplete="username" required disabled={loading} value={email} onChange={e=>setEmail(e.target.value)} className="cp-input" placeholder="you@campus.edu"/></div>
+          <div><label className="block text-sm font-medium mb-2" htmlFor="password">Password</label><input id="password" type="password" autoComplete="current-password" required disabled={loading} value={password} onChange={e=>setPassword(e.target.value)} className="cp-input" placeholder="Enter your password"/></div>
+          {error&&<p role="alert" className="text-critical text-sm bg-critical/5 rounded-xl px-3 py-3">{error}</p>}
+          <button type="submit" disabled={loading} className="cp-primary w-full py-3">{loading?"Signing in…":entry==="student"?"Sign in to Student portal":"Sign in to Admin portal"}<span aria-hidden="true">→</span></button>
+        </form>
+        <p className="text-xs text-slate-soft leading-relaxed mt-5">Access follows the role assigned to your account.</p>
+        <div className="border-t border-ink-line mt-7 pt-5 text-sm">{entry==="student"?<p className="text-slate-soft">New to CampusPulse? <Link href="/register" className="text-signal font-medium hover:underline">Create a student account</Link></p>:<p className="text-slate-soft">Admin access is provisioned by your campus team.</p>}</div>
       </section>
-    </main>
-  );
-}
-
-function Blip({
-  top,
-  left,
-  size,
-  label,
-  intensity,
-}: {
-  top: string;
-  left: string;
-  size: string;
-  label: string;
-  intensity: "low" | "mid" | "high";
-}) {
-  const color =
-    intensity === "high" ? "bg-critical" : intensity === "mid" ? "bg-amber" : "bg-signal";
-  return (
-    <div className="absolute" style={{ top, left }}>
-      <span className={`absolute inline-flex rounded-full ${color} opacity-60 animate-ping1 ${size}`} />
-      <span className={`relative inline-flex rounded-full ${color} ${size}`} />
-      <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 whitespace-nowrap text-[10px] font-mono text-slate-soft">
-        {label}
-      </span>
     </div>
-  );
+    <footer className="max-w-7xl mx-auto px-5 sm:px-10 pb-7 flex flex-wrap justify-between gap-3 text-xs text-slate-soft"><span>CampusPulse · Campus grievance management</span><span>Built around a better campus experience.</span></footer>
+  </main>;
 }

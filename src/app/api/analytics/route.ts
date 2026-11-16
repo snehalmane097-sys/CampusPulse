@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import Grievance, { GrievancePriority } from "@/models/Grievance";
-import { verifyToken, getTokenFromHeader } from "@/lib/auth";
+import { authenticate, fail, body, id, limit } from "@/lib/api";
 import { coordsFor } from "@/lib/campusMap";
 import { computeEarlyWarnings } from "@/lib/earlyWarning";
 
@@ -9,8 +9,7 @@ const PRIORITY_RANK: Record<GrievancePriority, number> = { Low: 0, Medium: 1, Hi
 
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
-    const auth = verifyToken(getTokenFromHeader(req.headers.get("authorization")) || "");
+    const auth = await authenticate(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     if (auth.role !== "admin") {
       return NextResponse.json({ error: "Admin access required." }, { status: 403 });
@@ -19,16 +18,17 @@ export async function GET(req: NextRequest) {
     const all = await Grievance.find({});
     const total = all.length;
     const resolved = all.filter((g) => g.status === "Resolved");
+    const timedResolutions = resolved.filter(g => g.resolvedAt);
     const active = total - resolved.length;
 
     const avgResolutionHours =
-      resolved.length === 0
+      timedResolutions.length === 0
         ? 0
         : Math.round(
-            resolved.reduce((sum, g) => {
-              const hrs = (g.updatedAt.getTime() - g.createdAt.getTime()) / 36e5;
+            timedResolutions.reduce((sum, g) => {
+              const hrs = (g.resolvedAt!.getTime() - g.createdAt.getTime()) / 36e5;
               return sum + hrs;
-            }, 0) / resolved.length
+            }, 0) / timedResolutions.length
           );
 
     const categoryCounts: Record<string, number> = {};
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     });
 
     const hotspots = Object.entries(locationCounts).map(([location, count]) => {
-      const [lat, lng] = coordsFor(location);
+      const [lat, lng] = coordsFor(location) || [null, null];
       return {
         location,
         count,
@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       total,
+      criticalActive: all.filter(g => g.status !== "Resolved" && g.priorityLabel === "Critical").length,
       active,
       resolved: resolved.length,
       avgResolutionHours,
@@ -91,7 +92,8 @@ export async function GET(req: NextRequest) {
       earlyWarnings,
     });
   } catch (err) {
-    console.error("GET /api/analytics failed:", err);
-    return NextResponse.json({ error: "Could not load analytics right now." }, { status: 500 });
+    return fail(err);
   }
 }
+
+export const dynamic = "force-dynamic";

@@ -1,87 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dbConnect } from "@/lib/mongodb";
-import Grievance from "@/models/Grievance";
-import Notification from "@/models/Notification";
-import { verifyToken, getTokenFromHeader } from "@/lib/auth";
-import { syncIncidentStatus } from "@/lib/incidentEngine";
-import { sanitizeGrievanceForAdmin } from "@/lib/sanitize";
-
-// GET /api/grievances/:id — a student may only fetch their own grievance;
-// an admin may fetch any, with the identity masked if it's anonymous.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+import { authenticate, body, fail, transaction, limit, text, ApiError } from "@/lib/api";
+import { grievanceAccess } from "@/services/access";
+import { transition, emitTransition } from "@/services/lifecycle";
+import { sanitizeGrievanceForAdmin, sanitizeGrievanceForStudent } from "@/lib/sanitize";
+import { withVerifiedOrigins } from "@/services/complaintOrigin";
+import BuildingAssignment from "@/models/BuildingAssignment";
+import CampusBuilding from "@/models/CampusBuilding";
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await dbConnect();
-    const auth = verifyToken(getTokenFromHeader(req.headers.get("authorization")) || "");
-    if (!auth) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
-    const grievance = await Grievance.findById(params.id);
-    if (!grievance) return NextResponse.json({ error: "Not found." }, { status: 404 });
-
-    if (auth.role !== "admin" && String(grievance.student) !== auth.userId) {
-      return NextResponse.json({ error: "You don't have access to this grievance." }, { status: 403 });
+    const actor = await authenticate(req), g = await grievanceAccess((await params).id, actor);
+    const [grievance] = await withVerifiedOrigins([actor.role === "admin" ? sanitizeGrievanceForAdmin(g) : sanitizeGrievanceForStudent(g)]);
+    let buildingChanges;
+    if (actor.role === "admin") {
+      const changes = await BuildingAssignment.find({ grievance: g._id }).sort({ revision: -1 }).limit(100).lean();
+      const ids = changes.flatMap(c => [c.previousBuilding, c.building]).filter(Boolean);
+      const buildings = ids.length ? await CampusBuilding.find({ _id: { $in: ids } }).select("_id displayName").lean() : [];
+      const name = (value: unknown) => value ? buildings.find(b => String(b._id) === String(value))?.displayName || "Unavailable building" : "Not verified";
+      buildingChanges = changes.map(c => ({ revision: c.revision, at: c.at, reason: c.reason, previousBuilding: name(c.previousBuilding), building: name(c.building), previousDepartment: c.previousDepartment || "Not verified", department: c.department || "Not verified" }));
     }
-
-    const payload = auth.role === "admin" ? sanitizeGrievanceForAdmin(grievance) : grievance;
-    return NextResponse.json({ grievance: payload });
-  } catch (err) {
-    console.error("GET /api/grievances/[id] failed:", err);
-    return NextResponse.json({ error: "Could not load this grievance right now." }, { status: 500 });
-  }
+    return NextResponse.json({ grievance, ...(buildingChanges ? { buildingChanges } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (e) { return fail(e); }
+}
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const actor = await authenticate(req, true); await limit(req, "status", 60, actor.userId); const data = await body(req);
+    const note = data.note === undefined || data.note === "" ? "" : text(data.note, "Investigation note", 1, 2000);
+    if (data.expectedVersion !== undefined && (!Number.isInteger(data.expectedVersion) || data.expectedVersion < 0)) throw new ApiError(400, "Invalid complaint version.");
+    const result = await transaction(async session => { const g = await grievanceAccess((await params).id, actor, false, session); if (data.expectedVersion !== undefined && data.expectedVersion !== g.__v) throw new ApiError(409, "Complaint changed. Reload before saving."); return { grievance: await transition(g, data.status, actor, session, false, note), changed: g.status !== data.status || !!note }; });
+    if (result.changed) emitTransition(result.grievance);
+    return NextResponse.json({ grievance: sanitizeGrievanceForAdmin(result.grievance) });
+  } catch (e) { return fail(e); }
 }
 
-// PATCH /api/grievances/:id — admin moves Pending -> In Progress -> Resolved.
-// Keeps the linked Incident's status in sync and pushes both the personal
-// and admin-room real-time updates.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    await dbConnect();
-    const auth = verifyToken(getTokenFromHeader(req.headers.get("authorization")) || "");
-    if (!auth) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    if (auth.role !== "admin") {
-      return NextResponse.json({ error: "Only administrators can update status." }, { status: 403 });
-    }
-
-    const { status } = await req.json();
-    if (!["Pending", "In Progress", "Resolved"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status." }, { status: 400 });
-    }
-
-    const grievance = await Grievance.findByIdAndUpdate(params.id, { status }, { new: true });
-    if (!grievance) return NextResponse.json({ error: "Not found." }, { status: 404 });
-
-    if (grievance.student) {
-      await Notification.create({
-        user: grievance.student,
-        grievance: grievance._id,
-        message: `Your grievance is now "${status}".`,
-      });
-    }
-
-    let updatedIncident = null;
-    if (grievance.incident) {
-      updatedIncident = await syncIncidentStatus(String(grievance.incident));
-    }
-
-    const io = (global as any).__campuspulse_io;
-    if (io) {
-      if (grievance.student) {
-        io.to(`user:${grievance.student}`).emit("grievance:statusChanged", {
-          grievanceId: grievance._id,
-          status,
-        });
-      }
-      io.to("admin-room").emit("grievance:statusChanged", { grievanceId: grievance._id, status });
-      if (updatedIncident) {
-        io.to("admin-room").emit("incident:updated", {
-          incidentId: updatedIncident._id,
-          status: updatedIncident.status,
-        });
-      }
-    }
-
-    return NextResponse.json({ grievance, incident: updatedIncident });
-  } catch (err) {
-    console.error("PATCH /api/grievances/[id] failed:", err);
-    return NextResponse.json({ error: "Could not update this grievance right now." }, { status: 500 });
-  }
-}
+export const dynamic = "force-dynamic";

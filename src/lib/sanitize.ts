@@ -10,6 +10,7 @@ export function sanitizeGrievanceForAdmin<T extends { isAnonymous?: boolean; stu
   if (plain.isAnonymous) {
     delete plain.student;
   }
+  if (plain.history) plain.history = plain.history.map(({ actor, ...entry }: any) => entry);
   return plain;
 }
 
@@ -17,4 +18,10 @@ export function sanitizeGrievanceListForAdmin<T extends { isAnonymous?: boolean;
   grievances: T[]
 ): T[] {
   return grievances.map(sanitizeGrievanceForAdmin);
+}
+
+export function sanitizeGrievanceForStudent(grievance: any) {
+  const plain = grievance.toObject ? grievance.toObject() : { ...grievance };
+  if (plain.history) plain.history = plain.history.map(({ actor, note, ...entry }: any) => entry);
+  return plain;
 }

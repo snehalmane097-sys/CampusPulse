@@ -33,6 +33,17 @@ export interface IGrievance {
 
   createdAt: Date;
   updatedAt: Date;
+  resolutionCycle?: number;
+  resolvedAt?: Date;
+  resolutionDepartment?: string;
+  history?: any[];
+  attachmentCount?: number;
+  submissionKey?: string;
+  submissionHash?: string;
+  mapLocation?: import("@/lib/campusMap").MapLocation;
+  building?: mongoose.Types.ObjectId;
+  buildingRevision?: number;
+  originDepartment?: string;
 }
 
 const GrievanceSchema = new Schema<IGrievance>(
@@ -59,8 +70,24 @@ const GrievanceSchema = new Schema<IGrievance>(
 
     status: { type: String, enum: ["Pending", "In Progress", "Resolved"], default: "Pending" },
     incident: { type: Schema.Types.ObjectId, ref: "Incident", default: null },
+    resolutionCycle: { type: Number, default: 0 },
+    resolvedAt: Date,
+    resolutionDepartment: String,
+    attachmentCount: { type: Number, default: 0 },
+    submissionKey: String,
+    submissionHash: String,
+    building: { type: Schema.Types.ObjectId, ref: "CampusBuilding", default: undefined },
+    buildingRevision: { type: Number, default: 0 },
+    originDepartment: { type: String, maxlength: 120 },
+    mapLocation: { type: new Schema({ lat: { type: Number, required: true, min: -85, max: 85 }, lng: { type: Number, required: true, min: -180, max: 180 }, featureId: String, source: { type: String, enum: ["user-selected", "osm-feature"] } }, { _id: false }), default: undefined },
+    history: [{ _id: false, status: String, previousStatus: String, note: { type: String, maxlength: 2000 }, at: Date, actor: { type: Schema.Types.ObjectId, ref: "User" }, cycle: Number, department: String }],
   },
   { timestamps: true }
 );
+GrievanceSchema.index({ student: 1, createdAt: -1 });
+GrievanceSchema.index({ building: 1, createdAt: -1, status: 1, priorityLabel: 1 });
+GrievanceSchema.index({ student: 1, _id: -1 });
+GrievanceSchema.index({ student: 1, submissionKey: 1 }, { unique: true, partialFilterExpression: { submissionKey: { $type: "string" } } });
+GrievanceSchema.index({ category: 1, location: 1, status: 1, createdAt: -1 });
 
 export default (models.Grievance as mongoose.Model<IGrievance>) || model<IGrievance>("Grievance", GrievanceSchema);

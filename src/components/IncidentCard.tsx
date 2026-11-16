@@ -44,7 +44,7 @@ export default function IncidentCard({
           <span>Severity</span>
           <span>{incident.severityScore}/100</span>
         </div>
-        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+        <div className="h-1.5 rounded-full bg-ink-raised/60 overflow-hidden">
           <div
             className={`h-full rounded-full ${severityColor} transition-all duration-500`}
             style={{ width: `${incident.severityScore}%` }}

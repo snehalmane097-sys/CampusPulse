@@ -1,0 +1,1278 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "retrievedAt": "2026-11-10",
+    "sourceUrl": "https://api.openstreetmap.org/api/0.6/map?bbox=73.865,18.461,73.871,18.467",
+    "license": "ODbL-1.0",
+    "attribution": "Copyright OpenStreetMap contributors",
+    "boundaryStatus": "OSM college outline; not an official surveyed boundary",
+    "selection": "Tagged buildings, facilities and paths with a vertex inside the college outline; cross-boundary ways are retained whole, not clipped."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "way/213874316",
+      "properties": {
+        "name": "Vishwakarma Institute of Technology (VIT)",
+        "category": "campus",
+        "osmType": "way",
+        "osmId": "213874316",
+        "version": "3",
+        "updatedAt": "2025-11-09T07:27:32Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/213874316",
+        "tags": {
+          "addr:street": "Swami Vivekanand Road, Upper Indira Nagar",
+          "alt_name": "VIT",
+          "name": "Vishwakarma Institute of Technology (VIT)",
+          "wheelchair": "limited",
+          "amenity": "college"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8673454,
+              18.4633071
+            ],
+            [
+              73.86789,
+              18.4633502
+            ],
+            [
+              73.8679559,
+              18.462863
+            ],
+            [
+              73.8686482,
+              18.4629765
+            ],
+            [
+              73.8686337,
+              18.4634126
+            ],
+            [
+              73.8687708,
+              18.46342
+            ],
+            [
+              73.8687708,
+              18.4635304
+            ],
+            [
+              73.8689027,
+              18.4635304
+            ],
+            [
+              73.8692364,
+              18.4640089
+            ],
+            [
+              73.8693322,
+              18.4642911
+            ],
+            [
+              73.8693322,
+              18.4645365
+            ],
+            [
+              73.8692597,
+              18.4646223
+            ],
+            [
+              73.8678343,
+              18.4644604
+            ],
+            [
+              73.8673428,
+              18.464134
+            ],
+            [
+              73.8673454,
+              18.4633071
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/2328024918",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "node",
+        "osmId": "2328024918",
+        "version": "2",
+        "updatedAt": "2025-03-27T05:12:41Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/node/2328024918",
+        "tags": {
+          "highway": "crossing"
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          73.8681922,
+          18.4639584
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/11166456994",
+      "properties": {
+        "name": null,
+        "category": "entrance",
+        "osmType": "node",
+        "osmId": "11166456994",
+        "version": "1",
+        "updatedAt": "2023-09-04T08:48:58Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/node/11166456994",
+        "access": "private",
+        "tags": {
+          "access": "private",
+          "barrier": "gate"
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          73.8687463,
+          18.4645327
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/11832252014",
+      "properties": {
+        "name": "VIT Library",
+        "category": "library",
+        "osmType": "node",
+        "osmId": "11832252014",
+        "version": "2",
+        "updatedAt": "2024-04-20T15:24:41Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/node/11832252014",
+        "tags": {
+          "addr:full": "No.666, Upper Indiranagar, Bibwewadi, Pune, Maharashtra 411037",
+          "amenity": "library",
+          "name": "VIT Library"
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          73.8684708,
+          18.4634905
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964767",
+      "properties": {
+        "name": null,
+        "category": "building",
+        "osmType": "way",
+        "osmId": "223964767",
+        "version": "1",
+        "updatedAt": "2013-06-01T11:56:02Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964767",
+        "tags": {
+          "building": "yes"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8675711,
+              18.4634752
+            ],
+            [
+              73.8675754,
+              18.4633703
+            ],
+            [
+              73.8678892,
+              18.4633703
+            ],
+            [
+              73.8678705,
+              18.4638257
+            ],
+            [
+              73.8677712,
+              18.4638257
+            ],
+            [
+              73.867782,
+              18.4635204
+            ],
+            [
+              73.8677444,
+              18.4634797
+            ],
+            [
+              73.8675711,
+              18.4634752
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964768",
+      "properties": {
+        "name": null,
+        "category": "other",
+        "osmType": "way",
+        "osmId": "223964768",
+        "version": "1",
+        "updatedAt": "2013-06-01T11:56:02Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964768",
+        "tags": {
+          "leisure": "park"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8680368,
+              18.4642099
+            ],
+            [
+              73.8680421,
+              18.4640089
+            ],
+            [
+              73.8680663,
+              18.4640013
+            ],
+            [
+              73.8683828,
+              18.4639962
+            ],
+            [
+              73.8684203,
+              18.4640038
+            ],
+            [
+              73.8684294,
+              18.4641996
+            ],
+            [
+              73.8684096,
+              18.4642125
+            ],
+            [
+              73.8682175,
+              18.4642228
+            ],
+            [
+              73.8680529,
+              18.4642252
+            ],
+            [
+              73.8680368,
+              18.4642099
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964769",
+      "properties": {
+        "name": null,
+        "category": "building",
+        "osmType": "way",
+        "osmId": "223964769",
+        "version": "2",
+        "updatedAt": "2025-03-28T08:58:31Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964769",
+        "tags": {
+          "building": "yes"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8674059,
+              18.4637487
+            ],
+            [
+              73.8674118,
+              18.4640649
+            ],
+            [
+              73.8678383,
+              18.4644262
+            ],
+            [
+              73.8687113,
+              18.464549
+            ],
+            [
+              73.8687456,
+              18.4643292
+            ],
+            [
+              73.8687065,
+              18.4643237
+            ],
+            [
+              73.8687202,
+              18.4642363
+            ],
+            [
+              73.8684806,
+              18.4642024
+            ],
+            [
+              73.86847,
+              18.4642701
+            ],
+            [
+              73.8684202,
+              18.464263
+            ],
+            [
+              73.8684001,
+              18.4643905
+            ],
+            [
+              73.8679596,
+              18.4643279
+            ],
+            [
+              73.867967,
+              18.4642811
+            ],
+            [
+              73.8675965,
+              18.4639888
+            ],
+            [
+              73.8675957,
+              18.4639437
+            ],
+            [
+              73.867523,
+              18.4639449
+            ],
+            [
+              73.8675193,
+              18.4637468
+            ],
+            [
+              73.8674059,
+              18.4637487
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964770",
+      "properties": {
+        "name": null,
+        "category": "building",
+        "osmType": "way",
+        "osmId": "223964770",
+        "version": "2",
+        "updatedAt": "2025-03-27T05:39:57Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964770",
+        "tags": {
+          "building": "yes"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8682701,
+              18.4639072
+            ],
+            [
+              73.8682674,
+              18.4638105
+            ],
+            [
+              73.8684927,
+              18.4638028
+            ],
+            [
+              73.8684923,
+              18.4637641
+            ],
+            [
+              73.8684471,
+              18.4637647
+            ],
+            [
+              73.8684463,
+              18.4637082
+            ],
+            [
+              73.8684431,
+              18.4634915
+            ],
+            [
+              73.8684391,
+              18.4632228
+            ],
+            [
+              73.8685797,
+              18.4632174
+            ],
+            [
+              73.8685931,
+              18.463761
+            ],
+            [
+              73.8685566,
+              18.4637616
+            ],
+            [
+              73.8685573,
+              18.4638004
+            ],
+            [
+              73.8688375,
+              18.4637999
+            ],
+            [
+              73.8688389,
+              18.4639024
+            ],
+            [
+              73.8682701,
+              18.4639072
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964771",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "223964771",
+        "version": "3",
+        "updatedAt": "2025-03-27T05:12:41Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964771",
+        "access": "private",
+        "tags": {
+          "highway": "service",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.867916,
+            18.4639527
+          ],
+          [
+            73.8679375,
+            18.4635586
+          ],
+          [
+            73.8679483,
+            18.4633907
+          ],
+          [
+            73.867967,
+            18.4633017
+          ],
+          [
+            73.8680502,
+            18.4632202
+          ],
+          [
+            73.8682229,
+            18.4632279
+          ],
+          [
+            73.8683208,
+            18.4632073
+          ],
+          [
+            73.8683801,
+            18.4631569
+          ],
+          [
+            73.8685383,
+            18.4631592
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964773",
+      "properties": {
+        "name": null,
+        "category": "building",
+        "osmType": "way",
+        "osmId": "223964773",
+        "version": "1",
+        "updatedAt": "2013-06-01T11:56:02Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964773",
+        "tags": {
+          "building": "yes"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8688146,
+              18.4644974
+            ],
+            [
+              73.868837,
+              18.464354
+            ],
+            [
+              73.8688601,
+              18.4643559
+            ],
+            [
+              73.8688689,
+              18.4643085
+            ],
+            [
+              73.8688456,
+              18.4643052
+            ],
+            [
+              73.868878,
+              18.4641235
+            ],
+            [
+              73.8692592,
+              18.4641719
+            ],
+            [
+              73.8692458,
+              18.4642568
+            ],
+            [
+              73.8689616,
+              18.4642203
+            ],
+            [
+              73.8689423,
+              18.4643203
+            ],
+            [
+              73.8689597,
+              18.4643236
+            ],
+            [
+              73.8689499,
+              18.4643707
+            ],
+            [
+              73.8689319,
+              18.4643673
+            ],
+            [
+              73.868921,
+              18.4644226
+            ],
+            [
+              73.8692028,
+              18.4644621
+            ],
+            [
+              73.8691875,
+              18.464552
+            ],
+            [
+              73.8688146,
+              18.4644974
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964774",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "223964774",
+        "version": "4",
+        "updatedAt": "2025-03-27T05:39:57Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964774",
+        "access": "private",
+        "tags": {
+          "highway": "footway",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8681922,
+            18.4639584
+          ],
+          [
+            73.8681977,
+            18.4638054
+          ],
+          [
+            73.8682326,
+            18.4637494
+          ],
+          [
+            73.8683824,
+            18.4637107
+          ],
+          [
+            73.8683786,
+            18.4634939
+          ],
+          [
+            73.8683747,
+            18.4632711
+          ],
+          [
+            73.8683801,
+            18.4631569
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964775",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "223964775",
+        "version": "5",
+        "updatedAt": "2025-03-27T17:29:05Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964775",
+        "access": "private",
+        "tags": {
+          "highway": "service",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8672731,
+            18.4636503
+          ],
+          [
+            73.867294,
+            18.4636493
+          ],
+          [
+            73.867562,
+            18.4636375
+          ],
+          [
+            73.8676371,
+            18.46364
+          ],
+          [
+            73.8676655,
+            18.4636542
+          ],
+          [
+            73.8676747,
+            18.4636769
+          ],
+          [
+            73.8676756,
+            18.4639086
+          ],
+          [
+            73.8676908,
+            18.4639504
+          ],
+          [
+            73.8678705,
+            18.4639522
+          ],
+          [
+            73.867916,
+            18.4639527
+          ],
+          [
+            73.8680141,
+            18.4639537
+          ],
+          [
+            73.8681922,
+            18.4639584
+          ],
+          [
+            73.8682755,
+            18.4639606
+          ],
+          [
+            73.8684176,
+            18.4639657
+          ],
+          [
+            73.8684632,
+            18.4639835
+          ],
+          [
+            73.8684659,
+            18.4640573
+          ],
+          [
+            73.8684551,
+            18.464217
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964777",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "223964777",
+        "version": "2",
+        "updatedAt": "2023-09-04T08:48:06Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964777",
+        "access": "private",
+        "tags": {
+          "highway": "service",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.867269,
+            18.4633811
+          ],
+          [
+            73.8672894,
+            18.4633791
+          ],
+          [
+            73.8673501,
+            18.463378
+          ],
+          [
+            73.8673716,
+            18.4633932
+          ],
+          [
+            73.8673796,
+            18.463467
+          ],
+          [
+            73.8673796,
+            18.4635332
+          ],
+          [
+            73.8673823,
+            18.463579
+          ],
+          [
+            73.867393,
+            18.463596
+          ],
+          [
+            73.8674091,
+            18.4635993
+          ],
+          [
+            73.8674976,
+            18.4635993
+          ],
+          [
+            73.8675835,
+            18.4635993
+          ],
+          [
+            73.8676169,
+            18.4636188
+          ],
+          [
+            73.8676371,
+            18.46364
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/223964778",
+      "properties": {
+        "name": "VIT Play Ground",
+        "category": "other",
+        "osmType": "way",
+        "osmId": "223964778",
+        "version": "2",
+        "updatedAt": "2025-03-27T05:12:41Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/223964778",
+        "tags": {
+          "landuse": "recreation_ground",
+          "name": "VIT Play Ground"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.867982,
+              18.4638522
+            ],
+            [
+              73.8679804,
+              18.4634289
+            ],
+            [
+              73.8679885,
+              18.4633271
+            ],
+            [
+              73.8680743,
+              18.4632533
+            ],
+            [
+              73.8681923,
+              18.4632228
+            ],
+            [
+              73.8682229,
+              18.4632279
+            ],
+            [
+              73.8683157,
+              18.4632355
+            ],
+            [
+              73.8683157,
+              18.46364
+            ],
+            [
+              73.8682257,
+              18.4636689
+            ],
+            [
+              73.8681776,
+              18.4636997
+            ],
+            [
+              73.8681458,
+              18.4637391
+            ],
+            [
+              73.8681414,
+              18.4638512
+            ],
+            [
+              73.867982,
+              18.4638522
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1117770840",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1117770840",
+        "version": "2",
+        "updatedAt": "2023-09-04T08:48:06Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1117770840",
+        "access": "private",
+        "tags": {
+          "highway": "service",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8684176,
+            18.4639657
+          ],
+          [
+            73.8688323,
+            18.463971
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1117770841",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1117770841",
+        "version": "2",
+        "updatedAt": "2023-09-04T08:48:58Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1117770841",
+        "access": "private",
+        "tags": {
+          "highway": "service",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8687392,
+            18.4645878
+          ],
+          [
+            73.8687463,
+            18.4645327
+          ],
+          [
+            73.8687832,
+            18.4642478
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371960983",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1371960983",
+        "version": "1",
+        "updatedAt": "2025-03-27T05:12:41Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371960983",
+        "access": "private",
+        "tags": {
+          "highway": "footway",
+          "access": "private"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8684551,
+            18.464217
+          ],
+          [
+            73.868423,
+            18.4642354
+          ],
+          [
+            73.8683932,
+            18.4642733
+          ],
+          [
+            73.8682862,
+            18.4642587
+          ],
+          [
+            73.8681296,
+            18.4642574
+          ],
+          [
+            73.8680368,
+            18.4642548
+          ],
+          [
+            73.8680175,
+            18.4642334
+          ],
+          [
+            73.8680073,
+            18.4642099
+          ],
+          [
+            73.8680073,
+            18.464126
+          ],
+          [
+            73.8680073,
+            18.4640496
+          ],
+          [
+            73.8680141,
+            18.4639537
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371963261",
+      "properties": {
+        "name": "VIT Canteen",
+        "category": "canteen",
+        "osmType": "way",
+        "osmId": "1371963261",
+        "version": "2",
+        "updatedAt": "2026-10-12T07:43:32Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371963261",
+        "description": "OSM tags this facility as disused; current operation is unverified.",
+        "tags": {
+          "check_date": "2026-10-12",
+          "fast_food": "cafeteria",
+          "name": "VIT Canteen",
+          "disused:amenity": "cafe",
+          "building": "cafe"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8679841,
+              18.4630677
+            ],
+            [
+              73.8680023,
+              18.4629496
+            ],
+            [
+              73.868257,
+              18.4629854
+            ],
+            [
+              73.8682402,
+              18.4631008
+            ],
+            [
+              73.8679841,
+              18.4630677
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371963468",
+      "properties": {
+        "name": "VIT Fruit Canteen",
+        "category": "canteen",
+        "osmType": "way",
+        "osmId": "1371963468",
+        "version": "1",
+        "updatedAt": "2025-03-27T05:35:29Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371963468",
+        "tags": {
+          "amenity": "fast_food",
+          "name": "VIT Fruit Canteen",
+          "fast_food": "cafeteria",
+          "building": "cafe"
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              73.8685628,
+              18.4641423
+            ],
+            [
+              73.8686836,
+              18.4641545
+            ],
+            [
+              73.8686953,
+              18.4640508
+            ],
+            [
+              73.8685744,
+              18.4640386
+            ],
+            [
+              73.8685628,
+              18.4641423
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371963697",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1371963697",
+        "version": "1",
+        "updatedAt": "2025-03-27T05:37:46Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371963697",
+        "tags": {
+          "highway": "steps"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8677944,
+            18.4640553
+          ],
+          [
+            73.8678705,
+            18.4639522
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371963803",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1371963803",
+        "version": "1",
+        "updatedAt": "2025-03-27T05:39:57Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371963803",
+        "tags": {
+          "highway": "steps"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8683824,
+            18.4637107
+          ],
+          [
+            73.8684463,
+            18.4637082
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1371963804",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1371963804",
+        "version": "1",
+        "updatedAt": "2025-03-27T05:39:57Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1371963804",
+        "tags": {
+          "highway": "steps"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8683786,
+            18.4634939
+          ],
+          [
+            73.8684431,
+            18.4634915
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1372283734",
+      "properties": {
+        "name": null,
+        "category": "path",
+        "osmType": "way",
+        "osmId": "1372283734",
+        "version": "1",
+        "updatedAt": "2025-03-28T08:58:31Z",
+        "source": "OpenStreetMap",
+        "sourceUrl": "https://www.openstreetmap.org/way/1372283734",
+        "tags": {
+          "highway": "steps"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            73.8683932,
+            18.4642733
+          ],
+          [
+            73.8684448,
+            18.4642812
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,32 +1,37 @@
 import type { Config } from "tailwindcss";
+import { UI_COLORS } from "./src/lib/designTokens";
 
+const color = (key: keyof typeof UI_COLORS) => `rgb(var(--cp-${key}) / <alpha-value>)`;
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
         ink: {
-          DEFAULT: "#0E141B",
-          panel: "#161E27",
-          raised: "#1D2733",
-          line: "#2A3541",
+          DEFAULT: color("canvas"),
+          panel: color("surface"),
+          raised: color("raised"),
+          line: color("line"),
         },
         signal: {
-          DEFAULT: "#3ED9A3",
-          dim: "#2A9E78",
+          DEFAULT: color("primary"),
+          dim: color("primaryHover"),
         },
         amber: {
-          DEFAULT: "#F2A93B",
+          DEFAULT: color("pending"),
         },
         critical: {
-          DEFAULT: "#E5555C",
+          DEFAULT: color("danger"),
         },
         cyan: {
-          DEFAULT: "#4FC3F7",
+          DEFAULT: color("secondary"),
         },
-        ivory: "#EDF1F4",
+        ivory: color("text"),
+        success: color("success"),
+        progress: color("progress"),
+        accent: color("accent"),
         slate: {
-          soft: "#8C99A8",
+          soft: color("muted"),
         },
       },
       fontFamily: {

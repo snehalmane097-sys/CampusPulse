@@ -1,37 +1,67 @@
 {
   "name": "campuspulse",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "CampusPulse — Intelligent Network-Based Student Grievance & Campus Issue Management System",
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
-    "start": "cross-env NODE_ENV=production node server.js",
-    "lint": "next lint"
+    "start": "npm run preflight && cross-env NODE_ENV=production node server.js",
+    "lint": "eslint src scripts --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
+    "test": "node --require ./scripts/register.cjs --test tests/*.test.cjs",
+    "test:integration": "node --require ./scripts/register.cjs --test tests/integration/*.test.cjs",
+    "worker": "node --require ./scripts/register.cjs scripts/worker.ts",
+    "migrate": "node --require ./scripts/register.cjs scripts/migrate-v2.ts",
+    "preflight": "node scripts/preflight.cjs",
+    "department": "node --require ./scripts/register.cjs scripts/set-department.ts",
+    "check:syntax": "node scripts/check-source.cjs",
+    "test:local-integration": "node scripts/test-local-integration.cjs",
+    "prebuild": "node scripts/prepare-build.cjs"
   },
   "dependencies": {
-    "next": "14.2.5",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "typescript": "5.5.4",
-    "mongoose": "8.5.1",
-    "socket.io": "4.7.5",
-    "socket.io-client": "4.7.5",
-    "bcryptjs": "2.4.3",
-    "jsonwebtoken": "9.0.2",
-    "recharts": "2.12.7",
-    "leaflet": "1.9.4",
-    "react-leaflet": "4.2.1",
-    "date-fns": "3.6.0",
-    "cross-env": "7.0.3",
-    "@types/node": "20.14.11",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
+    "@react-leaflet/core": "2.1.0",
     "@types/bcryptjs": "2.4.6",
     "@types/jsonwebtoken": "9.0.6",
     "@types/leaflet": "1.9.12",
+    "@types/node": "20.14.11",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.19",
-    "postcss": "8.4.40",
-    "tailwindcss": "3.4.7"
+    "bcryptjs": "2.4.3",
+    "cross-env": "7.0.3",
+    "date-fns": "3.6.0",
+    "jsonwebtoken": "9.0.2",
+    "leaflet": "1.9.4",
+    "mongoose": "8.24.8",
+    "next": "15.5.29",
+    "postcss": "8.5.32",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-leaflet": "4.2.1",
+    "recharts": "2.15.4",
+    "socket.io": "4.8.4",
+    "socket.io-client": "4.8.4",
+    "tailwindcss": "3.4.7",
+    "typescript": "5.5.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "eslint": "9.39.1",
+    "eslint-config-next": "15.5.29",
+    "mongodb-memory-server": "10.2.3"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "recharts": {
+      "react-is": "19.2.0"
+    }
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": true
+    }
   }
 }

@@ -33,10 +33,7 @@ export function computeEarlyWarnings(allGrievances: IGrievance[]): EarlyWarningD
     const [category, location] = key.split("::");
     // Count distinct students where identity is known; anonymous reports
     // each still count as one affected person even without a linked identity.
-    const knownStudents = new Set(
-      group.filter((g) => g.student && !g.isAnonymous).map((g) => String(g.student))
-    );
-    const affectedStudents = knownStudents.size + group.filter((g) => g.isAnonymous).length;
+    const affectedStudents = new Set(group.filter(g => g.student).map(g => String(g.student))).size + group.filter(g => !g.student).length;
 
     const severity: EarlyWarningDTO["severity"] =
       group.length >= HIGH_SEVERITY_REPORT_THRESHOLD ? "High" : "Medium";
@@ -47,7 +44,7 @@ export function computeEarlyWarnings(allGrievances: IGrievance[]): EarlyWarningD
       category,
       location,
       reportCount: group.length,
-      affectedStudents: Math.max(affectedStudents, group.length),
+      affectedStudents,
       severity,
       reason: `${group.length} similar ${category.toLowerCase()} complaints detected in ${location} within the last ${WARNING_WINDOW_HOURS} hours.`,
       windowHours: WARNING_WINDOW_HOURS,

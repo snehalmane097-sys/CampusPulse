@@ -1,31 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { dbConnect } from "@/lib/mongodb";
+import { NextRequest } from "next/server";
 import User from "@/models/User";
-import { verifyPassword, signToken } from "@/lib/auth";
-
+import { verifyPassword } from "@/lib/auth";
+import { ApiError, body, fail, limit, text, passwordText, assertSameOrigin } from "@/lib/api";
+import { loginResponse } from "@/services/session";
+import { createHash } from "crypto";
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-    const { email, password } = await req.json();
-
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
-    }
-
-    const valid = await verifyPassword(password, user.passwordHash);
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
-    }
-
-    const token = signToken({ userId: user._id.toString(), role: user.role, name: user.name });
-    return NextResponse.json({ token, user: { id: user._id, name: user.name, role: user.role } });
-  } catch (err) {
-    console.error("POST /api/auth/login failed:", err);
-    return NextResponse.json({ error: "Could not sign in right now." }, { status: 500 });
-  }
+    assertSameOrigin(req);
+    const data = await body(req), email = text(data.email, "Email", 3, 254).toLowerCase(), password = passwordText(data.password);
+    await limit(req, "login-network", 1000);
+    await limit(req, "login-account", 20, createHash("sha256").update(email).digest("hex"));
+    const user = await User.findOne({ email });
+    if (!user || user.disabled || !await verifyPassword(password, user.passwordHash)) throw new ApiError(401, "Invalid email or password.");
+    return await loginResponse(user, req.cookies.get("cp_session")?.value);
+  } catch (e) { return fail(e); }
 }
+
+export const dynamic = "force-dynamic";
